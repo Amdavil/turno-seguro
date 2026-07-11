@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turno Seguro — Misión: cero accidentes</title>
+<style>
+  :root {
+    --bg: #ECEFEA;
+    --surface: #FFFFFF;
+    --ink: #1F262A;
+    --muted: #5B6871;
+    --line: #D5DCD3;
+    --green: #00795C;
+    --green-hi: #009B76;
+    --green-deep: #00503B;
+    --green-soft: #DFF0E8;
+    --yellow: #F2B705;
+    --yellow-ink: #8A6200;
+    --yellow-soft: #FBF0D0;
+    --red: #B62233;
+    --red-hi: #D53A4C;
+    --red-deep: #7E1424;
+    --red-soft: #FADDE0;
+    --blue: #0A5CA8;
+    --blue-hi: #1272C6;
+    --blue-deep: #063E70;
+    --blue-soft: #E0EDF9;
+    --shadow-card: 0 10px 28px rgba(31,38,42,0.10), 0 2px 6px rgba(31,38,42,0.06);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(900px 420px at 50% -120px, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%),
+      linear-gradient(165deg, #F1F5EF 0%, #DCE4DB 55%, #D3DCD3 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, Roboto, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  #app { max-width: 540px; margin: 0 auto; padding: 14px 14px 48px; }
+  #app > * { animation: fadeUp 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+  #app > *:nth-child(2) { animation-delay: 0.05s; }
+  #app > *:nth-child(3) { animation-delay: 0.1s; }
+  #app > *:nth-child(4) { animation-delay: 0.15s; }
+  #app > *:nth-child(5) { animation-delay: 0.2s; }
+  #app > *:nth-child(6) { animation-delay: 0.25s; }
+  #app > *:nth-child(7) { animation-delay: 0.3s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .hazard {
+    height: 10px;
+    background: repeating-linear-gradient(-45deg, var(--yellow) 0 14px, #23272B 14px 28px);
+    box-shadow: 0 2px 8px rgba(31,38,42,0.25);
+    position: relative; z-index: 30;
+  }
+
+  /* ---------- Genéricos ---------- */
+  .btn {
+    display: block; width: 100%; border: none; cursor: pointer;
+    background: linear-gradient(180deg, var(--green-hi), var(--green));
+    color: #fff; font-weight: 800; letter-spacing: 0.01em;
+    font-size: 17px; padding: 14px 18px; border-radius: 14px;
+    font-family: inherit; margin: 10px 0;
+    box-shadow: 0 4px 0 var(--green-deep), 0 8px 18px rgba(31,38,42,0.18);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--green-deep), 0 2px 6px rgba(31,38,42,0.2); }
+  .btn.blue {
+    background: linear-gradient(180deg, var(--blue-hi), var(--blue));
+    box-shadow: 0 4px 0 var(--blue-deep), 0 8px 18px rgba(31,38,42,0.18);
+  }
+  .btn.blue:active { box-shadow: 0 0 0 var(--blue-deep), 0 2px 6px rgba(31,38,42,0.2); }
+  .btn.sec {
+    background: var(--surface); color: var(--ink); border: 2px solid var(--line);
+    box-shadow: 0 3px 0 var(--line), 0 6px 14px rgba(31,38,42,0.08);
+    text-shadow: none; font-weight: 700;
+  }
+  .btn.sec:active { box-shadow: 0 0 0 var(--line); transform: translateY(3px); }
+  .card {
+    background: var(--surface); border: 1px solid rgba(31,38,42,0.06);
+    border-radius: 16px; padding: 18px 20px; margin: 14px 0;
+    box-shadow: var(--shadow-card);
+  }
+  .tag { display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:6px; }
+  .tag.g { background: var(--green-soft); color: var(--green); }
+  .tag.y { background: var(--yellow-soft); color: var(--yellow-ink); }
+  .tag.r { background: var(--red-soft); color: var(--red); }
+  .tag.b { background: var(--blue-soft); color: var(--blue); }
+
+  /* ---------- Portada ---------- */
+  .home { text-align: center; padding-top: 30px; position: relative; }
+  .home .logo { font-size: 54px; line-height: 1; }
+  .home .logo svg, .home .logo span { filter: drop-shadow(0 10px 22px rgba(0,121,92,0.35)); }
+  .home h1 {
+    font-size: clamp(42px, 11vw, 52px); font-weight: 900; letter-spacing: -0.03em;
+    margin: 12px 0 2px; text-shadow: 0 2px 0 #fff, 0 10px 24px rgba(31,38,42,0.15);
+  }
+  .home h1 .dot { color: var(--green); }
+  .mini-hazard {
+    width: 130px; height: 7px; margin: 10px auto 14px; border-radius: 4px;
+    background: repeating-linear-gradient(-45deg, var(--yellow) 0 9px, #23272B 9px 18px);
+  }
+  .home .tagline { color: var(--muted); margin: 0 0 24px; font-size: 16.5px; }
+  .brand { font-size: 12px; color: var(--muted); margin-top: 20px; }
+  .empresa-nombre { font-size: 14px; font-weight: 700; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin: 2px 0 0; }
+  .hero-icons { position: absolute; inset: 0; pointer-events: none; z-index: -1; }
+  .hero-icons span { position: absolute; font-size: 26px; opacity: 0.35; animation: floaty 4.5s ease-in-out infinite; }
+  .hero-icons span:nth-child(1) { top: 12px; left: 6%; animation-delay: 0s; }
+  .hero-icons span:nth-child(2) { top: 80px; right: 5%; animation-delay: 0.7s; }
+  .hero-icons span:nth-child(3) { top: 190px; left: 3%; animation-delay: 1.4s; font-size: 22px; }
+  .hero-icons span:nth-child(4) { top: 10px; right: 14%; animation-delay: 2.1s; font-size: 22px; }
+  .hero-icons span:nth-child(5) { top: 150px; right: 2%; animation-delay: 2.8s; }
+  .hero-icons span:nth-child(6) { top: 110px; left: 10%; animation-delay: 3.5s; font-size: 20px; }
+  @keyframes floaty { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-12px) rotate(5deg); } }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(31,38,42,0.08);
+    border-radius: 14px; padding: 9px 13px; margin-bottom: 10px;
+    font-size: 14px; font-weight: 600;
+    position: sticky; top: 10px; z-index: 20;
+    box-shadow: 0 8px 20px rgba(31,38,42,0.12);
+  }
+  .hud .avatar { font-size: 24px; filter: drop-shadow(0 2px 3px rgba(31,38,42,0.25)); }
+  .hud .pts { color: var(--green); font-size: 18px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .hud .bien { flex: 1; }
+  .hud .bien .label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+  .bar { height: 12px; background: rgba(31,38,42,0.1); border-radius: 8px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(31,38,42,0.15); }
+  .bar > div {
+    height: 100%; border-radius: 8px;
+    background: linear-gradient(180deg, var(--green-hi), var(--green));
+    transition: width 0.5s cubic-bezier(0.3, 1.2, 0.4, 1);
+  }
+  .bar.warn > div { background: linear-gradient(180deg, #FFCB2E, var(--yellow)); }
+  .bar.low > div { background: linear-gradient(180deg, var(--red-hi), var(--red)); animation: pulseBar 1s ease-in-out infinite; }
+  @keyframes pulseBar { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+  .hud .icobtn { background: none; border: none; font-size: 19px; cursor: pointer; padding: 2px; transition: transform 0.15s; }
+  .hud .icobtn:hover { transform: scale(1.2); }
+  .progress { font-size: 12.5px; color: var(--muted); margin: 0 2px 8px; display: flex; justify-content: space-between; font-weight: 600; }
+  .racha { color: var(--yellow-ink); font-weight: 800; animation: pulseBar 1.2s ease-in-out infinite; }
+
+  /* ---------- Escena ---------- */
+  .zona { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 6px 2px 8px; }
+  .scene-wrap {
+    border-radius: 16px; overflow: hidden; background: #fff;
+    border: 1px solid rgba(31,38,42,0.08);
+    box-shadow: var(--shadow-card);
+    transition: filter 0.3s;
+  }
+  .scene-wrap svg { display: block; width: 100%; height: auto; }
+  .scene-wrap.frozen { filter: grayscale(1) contrast(1.15); }
+  .scene-wrap.blur { filter: blur(3px) saturate(0.7); }
+  .scene-wrap.shake { animation: shake 0.5s both; }
+  @keyframes shake {
+    10%, 90% { transform: translateX(-2px); }
+    20%, 80% { transform: translateX(4px); }
+    30%, 50%, 70% { transform: translateX(-6px); }
+    40%, 60% { transform: translateX(6px); }
+  }
+  .previ-row { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0; }
+  .previ-bot { flex: 0 0 54px; animation: float 2.6s ease-in-out infinite; filter: drop-shadow(0 6px 10px rgba(31,38,42,0.25)); }
+  @keyframes float { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-6px);} }
+  .bubble {
+    background: linear-gradient(180deg, #FFFFFF, var(--blue-soft));
+    border: 1px solid rgba(10,92,168,0.15);
+    border-radius: 14px; border-top-left-radius: 4px;
+    padding: 11px 15px; font-size: 15px; flex: 1;
+    box-shadow: 0 4px 12px rgba(31,38,42,0.08);
+  }
+  .bubble strong { color: var(--blue); }
+  .dec {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+    background: var(--surface); border: 2px solid var(--line); border-radius: 14px;
+    padding: 12px 14px; margin: 9px 0; font-size: 15.5px; font-family: inherit; color: var(--ink);
+    box-shadow: 0 3px 0 var(--line), 0 5px 12px rgba(31,38,42,0.06);
+    transition: transform 0.1s, border-color 0.15s, box-shadow 0.1s;
+  }
+  .dec:hover { border-color: var(--green); }
+  .dec:hover .letra { background: var(--green); color: #fff; }
+  .dec:active { transform: translateY(3px); box-shadow: 0 0 0 var(--line); border-color: var(--green); }
+  .dec .letra {
+    flex: 0 0 30px; height: 30px; border-radius: 50%;
+    background: var(--line); color: var(--ink);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; transition: background 0.15s, color 0.15s;
+  }
+
+  /* ---------- Efectos SVG ---------- */
+  @keyframes flicker { from { opacity: 1; } to { opacity: 0.15; } }
+  svg .fx-flicker { animation: flicker 0.45s ease-in-out infinite alternate; }
+  @keyframes wavepulse { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+  svg .fx-wave1 { animation: wavepulse 1.6s ease-in-out infinite; }
+  svg .fx-wave2 { animation: wavepulse 1.6s ease-in-out 0.4s infinite; }
+  svg .fx-wave3 { animation: wavepulse 1.6s ease-in-out 0.8s infinite; }
+  @keyframes alarmblink { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
+  svg .fx-alarm { animation: alarmblink 0.9s steps(2) infinite; }
+  @keyframes steam { 0% { transform: translateY(0); opacity: 0.8; } 100% { transform: translateY(-7px); opacity: 0; } }
+  svg .fx-steam { transform-box: fill-box; animation: steam 2s ease-out infinite; }
+  @keyframes helice { 0% { transform: scaleX(1); } 50% { transform: scaleX(0.15); } 100% { transform: scaleX(1); } }
+  svg .fx-helice { transform-box: fill-box; transform-origin: center; animation: helice 0.5s linear infinite; }
+
+  /* ---------- Flash de peligro ---------- */
+  .flash {
+    position: fixed; inset: 0; pointer-events: none; z-index: 90;
+    background: radial-gradient(ellipse at center, rgba(182,34,51,0) 35%, rgba(182,34,51,0.4) 100%);
+    animation: flashOut 0.8s ease-out forwards;
+  }
+  @keyframes flashOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* ---------- Confeti ---------- */
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 95; overflow: hidden; }
+  .confetti i {
+    position: absolute; top: -16px; width: 10px; height: 15px; border-radius: 2px; opacity: 0.95;
+    animation-name: confettiFall; animation-timing-function: linear; animation-fill-mode: forwards;
+  }
+  @keyframes confettiFall { to { transform: translateY(108vh) rotate(680deg); opacity: 0.7; } }
+
+  /* ---------- Mapa ---------- */
+  .mapa-mundo { margin: 14px 0 6px; font-weight: 800; font-size: 15px; letter-spacing: 0.02em; }
+  .mapa-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    border-radius: 10px; font-size: 14.5px; border-left: 3px solid transparent;
+  }
+  .mapa-item.done { color: var(--green); border-left-color: var(--green); }
+  .mapa-item.actual {
+    background: var(--green-soft); font-weight: 800; border-left-color: var(--green);
+    box-shadow: 0 3px 10px rgba(0,121,92,0.15);
+  }
+  .mapa-item.lock { color: var(--muted); opacity: 0.65; }
+
+  /* ---------- Overlays ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(16,22,20,0.6);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 50;
+    animation: overlayIn 0.2s ease both;
+  }
+  @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--surface); border-radius: 20px; padding: 24px;
+    max-width: 460px; width: 100%; max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    animation: modalIn 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.85) translateY(18px); } to { opacity: 1; transform: none; } }
+  .modal.ok { border-top: 8px solid var(--green); }
+  .modal.bad { border-top: 8px solid var(--red); }
+  .modal.info { border-top: 8px solid var(--blue); }
+  .modal.regla { border-top: 8px solid var(--yellow); }
+  .modal h2 { margin: 0 0 8px; font-size: 22px; font-weight: 800; }
+  .modal h2.alerta { color: var(--red); }
+  .modal h2.bien { color: var(--green); }
+  .delta { font-size: 34px; font-weight: 900; margin: 8px 0; animation: deltaPop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) 0.15s both; font-variant-numeric: tabular-nums; }
+  @keyframes deltaPop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+  .delta.up { color: var(--green); }
+  .delta.down { color: var(--red); }
+  .exp {
+    background: var(--blue-soft); border-left: 4px solid var(--blue);
+    border-radius: 10px; padding: 11px 15px; font-size: 14.5px; margin: 14px 0;
+  }
+  .exp strong { color: var(--blue); }
+  .regla-txt { font-size: 20px; font-weight: 800; text-align: center; padding: 12px 4px; }
+
+  /* ---------- Kit / quiz ---------- */
+  .kit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+  .kit-item {
+    border: 2px solid var(--line); background: var(--surface); border-radius: 14px;
+    padding: 12px 8px; text-align: center; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--ink);
+    box-shadow: 0 3px 0 var(--line);
+    transition: transform 0.12s, border-color 0.15s, box-shadow 0.12s;
+  }
+  .kit-item:hover { transform: translateY(-2px); }
+  .kit-item:active { transform: translateY(2px); box-shadow: 0 0 0 var(--line); }
+  .kit-item .ico { font-size: 30px; display: block; filter: drop-shadow(0 3px 4px rgba(31,38,42,0.2)); }
+  .kit-item.sel { border-color: var(--green); background: var(--green-soft); box-shadow: 0 3px 0 var(--green); }
+  .kit-item.correcto { border-color: var(--green); background: var(--green-soft); }
+  .kit-item.errado { border-color: var(--red); background: var(--red-soft); animation: shake 0.4s both; }
+
+  /* ---------- Resultados ---------- */
+  .res-head { text-align: center; padding: 10px 0 4px; }
+  .res-pct {
+    font-size: 62px; font-weight: 900; line-height: 1.05; letter-spacing: -0.03em;
+    background: linear-gradient(120deg, var(--green), var(--blue));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .nivel { display: inline-block; font-size: 16px; font-weight: 800; padding: 8px 18px; border-radius: 10px; margin: 10px 0 2px; }
+  .badges { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .badge {
+    border: 1px solid var(--line); border-radius: 14px; padding: 12px 8px;
+    text-align: center; font-size: 13px; font-weight: 700;
+    animation: badgeIn 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  }
+  @keyframes badgeIn { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+  .badge .ico { font-size: 30px; display: block; filter: drop-shadow(0 3px 5px rgba(31,38,42,0.25)); }
+  .badge:not(.off) {
+    background: linear-gradient(160deg, #FFFBEE, #FFF0C2);
+    border-color: #E8C766;
+    box-shadow: 0 6px 16px rgba(232,183,5,0.25);
+  }
+  .badge.off { opacity: 0.35; filter: grayscale(1); }
+  table.hist { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.hist th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 6px 8px; border-bottom: 2px solid var(--line); }
+  table.hist td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
+
+  input[type=text] {
+    width: 100%; font-size: 17px; padding: 13px 15px; border-radius: 12px;
+    border: 2px solid var(--line); font-family: inherit; margin: 6px 0 14px;
+    background: var(--surface); color: var(--ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+  .avatars { display: flex; gap: 10px; justify-content: center; margin: 8px 0 18px; }
+  .avatars button {
+    font-size: 36px; background: var(--surface); border: 3px solid var(--line);
+    border-radius: 14px; padding: 8px 12px; cursor: pointer;
+    box-shadow: 0 3px 0 var(--line);
+    transition: transform 0.12s, border-color 0.15s;
+  }
+  .avatars button:hover { transform: translateY(-3px); }
+  .avatars button.sel { border-color: var(--green); background: var(--green-soft); box-shadow: 0 3px 0 var(--green); transform: scale(1.06); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, svg * { animation: none !important; transition: none !important; }
+  }
+
+  /* ---------- Constancia (solo impresión) ---------- */
+  #cert { display: none; }
+  @media print {
+    body > *:not(#cert) { display: none !important; }
+    #cert { display: block; font-family: Georgia, serif; padding: 60px 50px; text-align: center; }
+    #cert .marco { border: 4px double #00795C; padding: 50px 40px; }
+    #cert h1 { letter-spacing: 0.05em; }
+    #cert .nombre { font-size: 30px; font-weight: 700; margin: 18px 0; }
+    #cert .datos { margin-top: 26px; font-size: 15px; line-height: 2; }
+  }
+</style>
+</head>
+<body>
+<div class="hazard"></div>
+<div id="app"></div>
+<div id="cert"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   TURNO SEGURO — prototipo MVP completo
+   Motor de escenas dirigido por datos: todo el contenido vive en PACK.
+   Personalización por empresa: edita PACK.empresa (nombre, color, logo).
+   Agregar un escenario = agregar un objeto a PACK.escenarios.
+   ===================================================================== */
+
+/* ---------- Arte SVG ---------- */
+function persona(x, y, opts) {
+  opts = opts || {};
+  const piel = "#D9A066";
+  const traje = opts.oficina ? "#546E7A" : "#1565C0";
+  let s = '<g transform="translate(' + x + ',' + y + ')' + (opts.rot ? ' rotate(' + opts.rot + ')' : '') + '">';
+  s += '<ellipse cx="0" cy="79" rx="22" ry="5" fill="rgba(31,38,42,0.18)"/>';
+  s += '<rect x="-11" y="46" width="9" height="26" rx="3" fill="#37474F"/>';
+  s += '<rect x="2" y="46" width="9" height="26" rx="3" fill="#37474F"/>';
+  s += '<rect x="-13" y="70" width="12" height="6" rx="2" fill="#212121"/><rect x="1" y="70" width="12" height="6" rx="2" fill="#212121"/>';
+  s += '<rect x="-14" y="12" width="28" height="38" rx="6" fill="' + traje + '"/>';
+  if (opts.chaleco) s += '<rect x="-14" y="12" width="28" height="26" rx="6" fill="#F57F17"/><rect x="-14" y="20" width="28" height="4" fill="#FFF59D"/>';
+  s += '<rect x="-20" y="14" width="7" height="24" rx="3.5" fill="' + traje + '"/><rect x="13" y="14" width="7" height="24" rx="3.5" fill="' + traje + '"/>';
+  s += '<circle cx="0" cy="0" r="13" fill="' + piel + '"/>';
+  s += '<circle cx="-4" cy="-2" r="1.6" fill="#212121"/><circle cx="4" cy="-2" r="1.6" fill="#212121"/>';
+  s += opts.susto ? '<circle cx="0" cy="6" r="2.5" fill="#212121"/>' : '<path d="M -4 5 Q 0 8 4 5" stroke="#212121" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
+  if (opts.casco) {
+    s += '<path d="M -13 -6 A 13 13 0 0 1 13 -6 L 15 -4 L -15 -4 Z" fill="#F2B705" stroke="#C99700" stroke-width="1"/>' +
+      '<path d="M -9 -9 A 10 10 0 0 1 -1 -12" stroke="#FFF176" stroke-width="2" fill="none" stroke-linecap="round"/>';
+  } else {
+    s += '<path d="M -12.5 -3 A 12.5 12.5 0 0 1 12.5 -3 L 12.5 0 Q 0 -8 -12.5 0 Z" fill="#4E342E"/>';
+  }
+  s += '</g>';
+  return s;
+}
+
+function previSVG(size) {
+  size = size || 54;
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 60 60">' +
+    '<line x1="30" y1="8" x2="30" y2="14" stroke="#607D8B" stroke-width="2"/>' +
+    '<ellipse class="fx-helice" cx="30" cy="5" rx="11" ry="2.2" fill="#78909C"/>' +
+    '<circle cx="30" cy="6" r="3" fill="#0A5CA8"/>' +
+    '<path d="M 12 34 A 18 16 0 0 1 48 34 Z" fill="#F2B705" stroke="#C99700" stroke-width="1.5"/>' +
+    '<path d="M 17 26 A 14 12 0 0 1 28 20" stroke="#FFF176" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+    '<rect x="8" y="33" width="44" height="7" rx="3.5" fill="#F2B705" stroke="#C99700" stroke-width="1.5"/>' +
+    '<circle cx="23" cy="29" r="3.5" fill="#212121"/><circle cx="37" cy="29" r="3.5" fill="#212121"/>' +
+    '<circle cx="24" cy="28" r="1.2" fill="#fff"/><circle cx="38" cy="28" r="1.2" fill="#fff"/>' +
+    '<path d="M 20 46 Q 30 52 40 46" stroke="#90A4AE" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+    '</svg>';
+}
+
+const SVGO = '<svg viewBox="0 0 480 270" role="img">';
+let gradN = 0;
+function fondo(pared, piso) {
+  gradN++;
+  const idW = "gw" + gradN, idF = "gf" + gradN;
+  return '<defs>' +
+    '<linearGradient id="' + idW + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.65"/>' +
+    '<stop offset="0.7" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="' + idF + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#000000" stop-opacity="0"/>' +
+    '<stop offset="1" stop-color="#000000" stop-opacity="0.14"/></linearGradient></defs>' +
+    '<rect width="480" height="270" fill="' + pared + '"/>' +
+    '<rect width="480" height="270" fill="url(#' + idW + ')"/>' +
+    '<rect y="205" width="480" height="65" fill="' + piso + '"/>' +
+    '<rect y="205" width="480" height="65" fill="url(#' + idF + ')"/>' +
+    '<line x1="0" y1="205" x2="480" y2="205" stroke="rgba(31,38,42,0.12)" stroke-width="2"/>';
+}
+function senalTriangulo(x, y, glifo) {
+  return '<path d="M ' + (x + 22) + ' ' + y + ' L ' + (x + 44) + ' ' + (y + 36) + ' L ' + x + ' ' + (y + 36) + ' Z" fill="#F2B705" stroke="#212121" stroke-width="2"/>' +
+    '<text x="' + (x + 15) + '" y="' + (y + 31) + '" font-size="18" font-weight="bold">' + glifo + '</text>';
+}
+function senalAzul(x, y, glifo) {
+  return '<circle cx="' + x + '" cy="' + y + '" r="20" fill="#0A5CA8" stroke="#fff" stroke-width="2"/>' +
+    '<text x="' + (x - 11) + '" y="' + (y + 8) + '" font-size="20">' + glifo + '</text>';
+}
+
+function sceneO1() {
+  return SVGO + fondo("#E8EDF2", "#C5CDD6") +
+    '<rect x="30" y="60" width="100" height="150" rx="4" fill="#78909C"/>' +
+    '<line x1="80" y1="60" x2="80" y2="210" stroke="#546E7A" stroke-width="3"/>' +
+    '<rect x="42" y="80" width="26" height="5" fill="#546E7A"/><rect x="42" y="92" width="26" height="5" fill="#546E7A"/>' +
+    '<rect x="92" y="80" width="26" height="5" fill="#546E7A"/><rect x="92" y="92" width="26" height="5" fill="#546E7A"/>' +
+    '<rect x="20" y="34" width="150" height="10" fill="#8D6E63"/>' +
+    '<text x="32" y="30" font-size="20">⛑️</text><text x="62" y="30" font-size="20">🥽</text>' +
+    '<text x="92" y="30" font-size="20">🦺</text><text x="122" y="30" font-size="20">🥾</text>' +
+    '<rect x="150" y="188" width="90" height="10" fill="#8D6E63"/>' +
+    '<rect x="156" y="198" width="8" height="16" fill="#6D4C41"/><rect x="226" y="198" width="8" height="16" fill="#6D4C41"/>' +
+    '<rect x="370" y="70" width="86" height="140" fill="#90A4AE" stroke="#546E7A" stroke-width="3"/>' +
+    '<circle cx="380" cy="142" r="4" fill="#37474F"/>' +
+    senalTriangulo(370, 26, "!") +
+    '<rect x="352" y="228" width="122" height="24" rx="4" fill="#0A5CA8"/>' +
+    '<text x="360" y="245" font-size="11" fill="#fff" font-weight="bold" font-family="Segoe UI">EPP OBLIGATORIO</text>' +
+    persona(280, 140, {}) + '</svg>';
+}
+
+function sceneO2(frozen) {
+  let s = SVGO + fondo("#EDEBE4", "#BDB8AC") +
+    '<rect x="90" y="215" width="300" height="34" fill="#F2B705" opacity="0.55"/>' +
+    '<line x1="90" y1="215" x2="390" y2="215" stroke="#8A6200" stroke-width="2" stroke-dasharray="12 8"/>' +
+    '<line x1="90" y1="249" x2="390" y2="249" stroke="#8A6200" stroke-width="2" stroke-dasharray="12 8"/>' +
+    '<rect x="30" y="20" width="10" height="190" fill="#616161"/><rect x="170" y="20" width="10" height="190" fill="#616161"/>' +
+    '<rect x="30" y="80" width="150" height="8" fill="#757575"/><rect x="30" y="145" width="150" height="8" fill="#757575"/><rect x="30" y="20" width="150" height="8" fill="#757575"/>' +
+    '<rect x="45" y="95" width="44" height="48" fill="#BC8F5E" stroke="#8D6E4E" stroke-width="2"/>' +
+    '<rect x="100" y="100" width="40" height="43" fill="#C9A06E" stroke="#8D6E4E" stroke-width="2"/>' +
+    '<rect x="45" y="158" width="55" height="50" fill="#BC8F5E" stroke="#8D6E4E" stroke-width="2"/>' +
+    '<rect x="110" y="163" width="48" height="45" fill="#C9A06E" stroke="#8D6E4E" stroke-width="2"/>';
+  if (frozen) {
+    s += '<g transform="translate(255,88) rotate(24)"><rect width="46" height="42" fill="#BC8F5E" stroke="#8D6E4E" stroke-width="2"/></g>' +
+      '<text x="300" y="80" font-size="30" font-weight="bold" fill="#B62233">!</text>' +
+      '<line x1="278" y1="40" x2="278" y2="70" stroke="#B62233" stroke-width="3"/>' +
+      persona(268, 160, { casco: true, chaleco: true, susto: true });
+  } else {
+    s += '<g transform="translate(96,42) rotate(-14)"><rect width="46" height="40" fill="#BC8F5E" stroke="#8D6E4E" stroke-width="2"/></g>' +
+      persona(300, 155, { casco: true, chaleco: true });
+  }
+  return s + '</svg>';
+}
+
+function sceneO3(frozen) {
+  let s = SVGO + fondo("#E9EDEC", "#B9C2BE") +
+    '<rect x="200" y="14" width="80" height="16" rx="4" fill="#607D8B"/>' +
+    '<path class="fx-flicker" d="M 228 30 L 236 40 L 230 46 L 240 56" stroke="#F2B705" stroke-width="3" fill="none"/>' +
+    '<circle class="fx-flicker" cx="240" cy="22" r="5" fill="#FFF176" stroke="#F2B705" stroke-width="2"/>' +
+    '<line x1="205" y1="215" x2="235" y2="70" stroke="#B71C1C" stroke-width="7" stroke-linecap="round"/>' +
+    '<line x1="275" y1="215" x2="245" y2="70" stroke="#B71C1C" stroke-width="7" stroke-linecap="round"/>' +
+    '<line x1="212" y1="185" x2="269" y2="185" stroke="#B71C1C" stroke-width="5"/>' +
+    '<line x1="218" y1="155" x2="263" y2="155" stroke="#B71C1C" stroke-width="5"/>' +
+    '<line x1="224" y1="125" x2="257" y2="125" stroke="#B71C1C" stroke-width="5"/>' +
+    '<line x1="229" y1="97" x2="252" y2="97" stroke="#B71C1C" stroke-width="5"/>' +
+    '<circle cx="60" cy="60" r="5" fill="#455A64"/>' +
+    '<path d="M 60 65 Q 45 95 55 130 M 60 65 Q 75 95 65 130" stroke="#F57F17" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+    '<rect x="44" y="128" width="34" height="9" rx="4" fill="#37474F"/>' +
+    '<text x="34" y="160" font-size="12" fill="#5B6871" font-family="Segoe UI">arnés</text>';
+  const estiba = function (y) {
+    return '<rect x="360" y="' + y + '" width="90" height="8" fill="#A1887F"/>' +
+      '<rect x="364" y="' + (y + 8) + '" width="10" height="12" fill="#8D6E63"/>' +
+      '<rect x="400" y="' + (y + 8) + '" width="10" height="12" fill="#8D6E63"/>' +
+      '<rect x="436" y="' + (y + 8) + '" width="10" height="12" fill="#8D6E63"/>';
+  };
+  s += estiba(190) + estiba(170) + estiba(150);
+  if (frozen) {
+    s += persona(405, 90, { casco: true, chaleco: true, susto: true, rot: -22 }) +
+      '<path d="M 360 100 L 345 112 M 365 120 L 350 130" stroke="#B62233" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="430" y="60" font-size="30" font-weight="bold" fill="#B62233">!</text>';
+  } else {
+    s += persona(320, 155, { casco: true, chaleco: true });
+  }
+  return s + '</svg>';
+}
+
+function sceneO4() {
+  return SVGO + fondo("#ECEAE4", "#BDB8AC") +
+    '<rect x="110" y="150" width="220" height="12" fill="#8D6E63"/>' +
+    '<rect x="120" y="162" width="12" height="52" fill="#6D4C41"/><rect x="308" y="162" width="12" height="52" fill="#6D4C41"/>' +
+    '<rect x="170" y="128" width="60" height="22" rx="4" fill="#90A4AE"/>' +
+    '<circle cx="245" cy="139" r="16" fill="#607D8B" stroke="#455A64" stroke-width="3"/>' +
+    '<rect x="258" y="132" width="34" height="12" rx="6" fill="#37474F"/>' +
+    '<g class="fx-flicker"><path d="M 232 128 L 214 104 M 240 124 L 232 96 M 248 126 L 254 100" stroke="#F57F17" stroke-width="3" stroke-linecap="round"/>' +
+    '<circle cx="214" cy="100" r="2.5" fill="#F2B705"/><circle cx="232" cy="92" r="2.5" fill="#F2B705"/><circle cx="255" cy="96" r="2.5" fill="#F2B705"/></g>' +
+    senalAzul(70, 60, "🥽") +
+    '<text x="40" y="105" font-size="11" fill="#5B6871" font-family="Segoe UI">uso obligatorio</text>' +
+    persona(380, 145, { casco: true, chaleco: true }) + '</svg>';
+}
+
+function sceneO5() {
+  return SVGO + fondo("#E8EDEA", "#B9C2BE") +
+    '<rect x="40" y="60" width="180" height="8" fill="#757575"/>' +
+    '<rect x="40" y="60" width="8" height="150" fill="#616161"/><rect x="212" y="60" width="8" height="150" fill="#616161"/>' +
+    '<rect x="58" y="80" width="36" height="52" rx="3" fill="#E57373"/><rect x="68" y="72" width="16" height="8" fill="#C62828"/>' +
+    '<rect x="106" y="80" width="36" height="52" rx="3" fill="#64B5F6"/><rect x="116" y="72" width="16" height="8" fill="#1565C0"/>' +
+    '<rect x="154" y="80" width="36" height="52" rx="3" fill="#FFF176"/><rect x="164" y="72" width="16" height="8" fill="#F9A825"/>' +
+    '<g transform="translate(76,100) rotate(45)"><rect x="-9" y="-9" width="18" height="18" fill="#fff" stroke="#C62828" stroke-width="2.5"/></g>' +
+    '<text x="71" y="106" font-size="12" font-weight="bold" fill="#C62828">!</text>' +
+    '<rect x="250" y="70" width="56" height="72" rx="3" fill="#fff" stroke="#90A4AE" stroke-width="2"/>' +
+    '<text x="258" y="90" font-size="13" font-weight="bold" fill="#0A5CA8" font-family="Segoe UI">FDS</text>' +
+    '<line x1="258" y1="100" x2="298" y2="100" stroke="#B0BEC5" stroke-width="3"/>' +
+    '<line x1="258" y1="112" x2="298" y2="112" stroke="#B0BEC5" stroke-width="3"/>' +
+    '<line x1="258" y1="124" x2="288" y2="124" stroke="#B0BEC5" stroke-width="3"/>' +
+    persona(380, 145, { casco: true, chaleco: true }) + '</svg>';
+}
+
+function sceneO6() {
+  return SVGO + fondo("#E9E9EF", "#BBBBC6") +
+    '<rect x="50" y="90" width="150" height="120" rx="8" fill="#78909C" stroke="#546E7A" stroke-width="3"/>' +
+    '<circle cx="100" cy="140" r="28" fill="#546E7A"/>' +
+    '<path d="M 100 118 L 100 162 M 78 140 L 122 140 M 85 125 L 115 155 M 115 125 L 85 155" stroke="#B0BEC5" stroke-width="4"/>' +
+    '<rect x="150" y="110" width="36" height="50" rx="4" fill="#455A64"/>' +
+    '<path class="fx-wave1" d="M 215 110 Q 235 140 215 170" stroke="#F57F17" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+    '<path class="fx-wave2" d="M 235 95 Q 265 140 235 185" stroke="#F57F17" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+    '<path class="fx-wave3" d="M 255 80 Q 295 140 255 200" stroke="#F57F17" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+    '<rect x="330" y="40" width="90" height="34" rx="5" fill="#F2B705" stroke="#212121" stroke-width="2"/>' +
+    '<text x="344" y="63" font-size="16" font-weight="bold" font-family="Segoe UI">95 dB</text>' +
+    senalAzul(390, 120, "🎧") +
+    persona(390, 160, { casco: true, chaleco: true }) + '</svg>';
+}
+
+function sceneO7(frozen) {
+  let s = SVGO + fondo("#EDEBE4", "#BDB8AC");
+  for (let i = 0; i < 6; i++) {
+    s += '<rect x="' + (300 + 0) + '" y="' + (210 + i * 10) + '" width="120" height="6" fill="#fff" opacity="0.9"/>';
+  }
+  const mx = frozen ? 210 : 60;
+  s += '<g transform="translate(' + mx + ',120)">' +
+    '<rect x="0" y="30" width="90" height="45" rx="6" fill="#F57F17"/>' +
+    '<rect x="10" y="0" width="8" height="34" fill="#455A64"/><rect x="62" y="0" width="8" height="34" fill="#455A64"/>' +
+    '<rect x="6" y="-4" width="70" height="7" fill="#455A64"/>' +
+    '<line x1="96" y1="20" x2="96" y2="88" stroke="#37474F" stroke-width="6"/>' +
+    '<rect x="96" y="70" width="34" height="5" fill="#37474F"/><rect x="96" y="82" width="34" height="5" fill="#37474F"/>' +
+    '<rect x="98" y="34" width="30" height="34" fill="#BC8F5E" stroke="#8D6E4E" stroke-width="2"/>' +
+    '<circle cx="22" cy="82" r="13" fill="#212121"/><circle cx="70" cy="82" r="13" fill="#212121"/>' +
+    '<circle cx="22" cy="82" r="5" fill="#78909C"/><circle cx="70" cy="82" r="5" fill="#78909C"/>' +
+    '<circle cx="40" cy="18" r="8" fill="#D9A066"/><rect x="32" y="26" width="16" height="14" rx="4" fill="#F2B705"/>' +
+    '</g>';
+  if (frozen) {
+    s += '<path d="M 175 215 L 200 215 M 170 225 L 195 225" stroke="#37474F" stroke-width="4" stroke-linecap="round"/>' +
+      '<text x="350" y="100" font-size="34" font-weight="bold" fill="#B62233">!</text>' +
+      persona(372, 150, { casco: true, chaleco: true, susto: true });
+  } else {
+    s += persona(372, 150, { casco: true, chaleco: true });
+  }
+  return s + '</svg>';
+}
+
+function sceneO8(frozen) {
+  let s = SVGO + fondo("#ECEAE4", "#BDB8AC") +
+    '<rect x="120" y="150" width="220" height="12" fill="#8D6E63"/>' +
+    '<rect x="130" y="162" width="12" height="52" fill="#6D4C41"/><rect x="318" y="162" width="12" height="52" fill="#6D4C41"/>' +
+    '<g transform="translate(190,118)">' +
+    '<rect x="0" y="0" width="56" height="26" rx="8" fill="#00897B"/>' +
+    '<rect x="40" y="22" width="14" height="24" rx="5" fill="#00695C"/>' +
+    '<rect x="-22" y="8" width="24" height="8" fill="#78909C"/>' +
+    '</g>' +
+    '<path d="M 244 150 q 20 18 44 10 q 24 -8 40 8" stroke="#37474F" stroke-width="4" fill="none"/>' +
+    '<path d="M 286 152 l 5 -7 l 4 8 l 5 -7" stroke="#B62233" stroke-width="3" fill="none"/>' +
+    '<rect x="140" y="96" width="72" height="22" rx="4" fill="#F2B705" stroke="#212121" stroke-width="2" transform="rotate(-8 176 107)"/>' +
+    '<text x="148" y="110" font-size="11" font-weight="bold" font-family="Segoe UI" transform="rotate(-8 176 107)">¿NO USAR?</text>';
+  if (frozen) {
+    s += '<path d="M 200 110 L 188 94 M 214 106 L 210 88 M 228 110 L 238 92" stroke="#F57F17" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="260" y="90" font-size="30" font-weight="bold" fill="#B62233">!</text>' +
+      persona(390, 145, { casco: true, chaleco: true, susto: true });
+  } else {
+    s += persona(390, 145, { casco: true, chaleco: true });
+  }
+  return s + '</svg>';
+}
+
+function sceneO9(frozen) {
+  let s = SVGO + fondo("#E9EDEC", "#B9C2BE") +
+    '<rect x="60" y="50" width="90" height="120" rx="4" fill="#78909C" stroke="#546E7A" stroke-width="3"/>' +
+    '<rect x="70" y="60" width="70" height="30" fill="#455A64"/>' +
+    '<circle cx="80" cy="110" r="5" fill="#B62233"/><circle cx="100" cy="110" r="5" fill="#F2B705"/><circle cx="120" cy="110" r="5" fill="#00795C"/>' +
+    '<path d="M 105 170 q 30 30 80 40" stroke="#B62233" stroke-width="5" fill="none"/>' +
+    '<path d="M 185 210 q 30 8 55 4" stroke="#212121" stroke-width="5" fill="none"/>' +
+    '<ellipse cx="280" cy="230" rx="55" ry="14" fill="#90CAF9" opacity="0.8"/>' +
+    senalTriangulo(180, 60, "⚡") +
+    '<text x="164" y="118" font-size="11" fill="#5B6871" font-family="Segoe UI">riesgo eléctrico</text>';
+  if (frozen) {
+    s += persona(300, 150, { casco: true, chaleco: true, susto: true }) +
+      '<path class="fx-flicker" d="M 268 100 l -8 14 l 10 2 l -8 14 M 336 104 l 8 14 l -10 2 l 8 14" stroke="#F2B705" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+      '<text x="330" y="80" font-size="32" font-weight="bold" fill="#B62233">!</text>';
+  } else {
+    s += persona(390, 150, { casco: true, chaleco: true });
+  }
+  return s + '</svg>';
+}
+
+function sceneO10() {
+  return SVGO + fondo("#EFECE6", "#C5BFB2") +
+    '<g class="fx-alarm"><circle cx="90" cy="45" r="14" fill="#B62233"/>' +
+    '<path d="M 70 30 L 62 22 M 110 30 L 118 22 M 90 26 L 90 14" stroke="#B62233" stroke-width="3" stroke-linecap="round"/></g>' +
+    '<rect x="330" y="34" width="110" height="36" rx="5" fill="#00795C"/>' +
+    '<text x="342" y="58" font-size="16" font-weight="bold" fill="#fff" font-family="Segoe UI">SALIDA →</text>' +
+    '<rect x="380" y="90" width="70" height="120" fill="#8D6E63" stroke="#5D4037" stroke-width="3"/>' +
+    '<circle cx="390" cy="152" r="4" fill="#37474F"/>' +
+    '<path d="M 120 235 h 50 l -8 -8 m 8 8 l -8 8 M 220 235 h 50 l -8 -8 m 8 8 l -8 8" stroke="#00795C" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    persona(200, 148, { casco: true, chaleco: true }) + '</svg>';
+}
+
+function sceneOficina(variante) {
+  let s = SVGO + fondo(variante === "F10" ? "#F5E3CC" : "#F2F1EC", "#D8D5CC");
+  s += '<rect x="40" y="40" width="110" height="80" rx="4" fill="' + (variante === "F10" ? "#FFB74D" : "#B3D4F0") + '" stroke="#90A4AE" stroke-width="3"/>' +
+    '<line x1="95" y1="40" x2="95" y2="120" stroke="#90A4AE" stroke-width="3"/>';
+  if (variante === "F10") s += '<circle cx="70" cy="95" r="14" fill="#FF8F00" opacity="0.9"/>';
+  s += '<rect x="180" y="150" width="180" height="10" fill="#8D6E63"/>' +
+    '<rect x="190" y="160" width="10" height="52" fill="#6D4C41"/><rect x="340" y="160" width="10" height="52" fill="#6D4C41"/>' +
+    '<rect x="230" y="104" width="70" height="44" rx="4" fill="#37474F"/>' +
+    '<rect x="238" y="112" width="54" height="28" fill="#B3D4F0"/>' +
+    '<rect x="258" y="148" width="14" height="8" fill="#546E7A"/>' +
+    '<rect x="310" y="136" width="36" height="12" rx="3" fill="#90A4AE"/>';
+  s += '<rect x="120" y="140" width="44" height="10" rx="5" fill="#455A64"/>' +
+    '<rect x="136" y="150" width="10" height="46" fill="#455A64"/>' +
+    '<rect x="120" y="110" width="12" height="36" rx="5" fill="#455A64"/>' +
+    '<circle cx="141" cy="200" r="7" fill="#37474F"/>';
+  if (variante === "F2") {
+    s += '<circle cx="410" cy="60" r="26" fill="#fff" stroke="#546E7A" stroke-width="3"/>' +
+      '<line x1="410" y1="60" x2="410" y2="42" stroke="#37474F" stroke-width="3"/>' +
+      '<line x1="410" y1="60" x2="424" y2="66" stroke="#37474F" stroke-width="3"/>';
+  }
+  if (variante === "F3") {
+    s += '<circle cx="70" cy="66" r="14" fill="#FFD54F"/>' +
+      '<path d="M 70 46 v -8 M 70 86 v 8 M 50 66 h -8 M 90 66 h 8 M 56 52 l -6 -6 M 84 52 l 6 -6 M 56 80 l -6 6 M 84 80 l 6 6" stroke="#FFB300" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M 300 112 L 332 94 M 300 124 L 338 110 M 300 136 L 334 130" stroke="#FFF176" stroke-width="4" stroke-linecap="round" opacity="0.9"/>';
+  }
+  if (variante === "F6") {
+    const pila = function (x, h) {
+      let p = '<rect x="' + x + '" y="' + (150 - h) + '" width="36" height="' + h + '" fill="#ECEFF1" stroke="#B0BEC5" stroke-width="2"/>';
+      for (let yy = 150 - h + 6; yy < 148; yy += 7) p += '<line x1="' + x + '" y1="' + yy + '" x2="' + (x + 36) + '" y2="' + yy + '" stroke="#CFD8DC" stroke-width="1.5"/>';
+      return p;
+    };
+    s += pila(186, 28) + pila(306, 40) +
+      '<rect x="232" y="92" width="12" height="12" fill="#FFF176"/><rect x="248" y="88" width="12" height="12" fill="#F48FB1"/><rect x="262" y="94" width="12" height="12" fill="#80DEEA"/>';
+  }
+  if (variante === "F8") {
+    s += '<rect x="250" y="232" width="64" height="14" rx="3" fill="#fff" stroke="#90A4AE" stroke-width="2"/>' +
+      '<circle cx="262" cy="239" r="3" fill="#37474F"/><circle cx="278" cy="239" r="3" fill="#37474F"/><circle cx="294" cy="239" r="3" fill="#37474F"/><circle cx="306" cy="239" r="3" fill="#37474F"/>' +
+      '<path d="M 262 232 q -6 -40 -20 -70 M 278 232 q 0 -44 -8 -70 M 294 232 q 8 -40 16 -70" stroke="#455A64" stroke-width="3" fill="none"/>' +
+      '<rect x="296" y="130" width="18" height="20" rx="3" fill="#fff" stroke="#8D6E63" stroke-width="2"/>' +
+      '<path d="M 314 134 q 8 4 0 10" stroke="#8D6E63" stroke-width="2" fill="none"/>' +
+      '<path class="fx-steam" d="M 301 124 q 3 -6 0 -10 M 308 124 q 3 -6 0 -10" stroke="#B0BEC5" stroke-width="2" fill="none"/>';
+  }
+  if (variante === "F4") {
+    s += '<rect x="200" y="238" width="46" height="14" rx="3" fill="#fff" stroke="#90A4AE" stroke-width="2"/>' +
+      '<path d="M 60 250 q 80 -24 160 -6 q 60 12 130 -8" stroke="#212121" stroke-width="5" fill="none"/>' +
+      '<path d="M 90 260 q 90 -20 200 2" stroke="#455A64" stroke-width="4" fill="none"/>';
+  }
+  if (variante === "F5") {
+    const caja = function (x, y, w) {
+      return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="34" fill="#BC8F5E" stroke="#8D6E4E" stroke-width="2"/>' +
+        '<text x="' + (x + 8) + '" y="' + (y + 22) + '" font-size="10" fill="#5D4037" font-family="Segoe UI">ARCHIVO</text>';
+    };
+    s += caja(52, 176, 78) + caja(58, 142, 66) + caja(64, 108, 54);
+  }
+  if (variante === "F10") {
+    s += '<rect x="366" y="120" width="8" height="30" fill="#455A64"/>' +
+      '<path d="M 355 120 h 30 l -6 -14 h -18 Z" fill="#F2B705"/>';
+  }
+  s += persona(410, 150, { oficina: true });
+  return s + '</svg>';
+}
+
+function sceneF7(frozen) {
+  let s = SVGO + '<rect width="480" height="270" fill="#F2F1EC"/>' +
+    '<path d="M 40 130 h 64 v 26 h 64 v 26 h 64 v 26 h 64 v 26 h 64 v 26 h 80 V 270 H 40 Z" fill="#D8D5CC" stroke="#B5AF9F" stroke-width="3"/>' +
+    '<line x1="60" y1="86" x2="400" y2="216" stroke="#78909C" stroke-width="5"/>' +
+    '<line x1="90" y1="98" x2="90" y2="130" stroke="#78909C" stroke-width="4"/>' +
+    '<line x1="200" y1="140" x2="200" y2="182" stroke="#78909C" stroke-width="4"/>' +
+    '<line x1="310" y1="182" x2="310" y2="234" stroke="#78909C" stroke-width="4"/>' +
+    '<rect x="398" y="40" width="66" height="26" rx="4" fill="#00795C"/>' +
+    '<text x="404" y="58" font-size="12" fill="#fff" font-weight="bold" font-family="Segoe UI">Piso 1 ↓</text>';
+  if (frozen) {
+    s += persona(215, 92, { oficina: true, susto: true, rot: 18 }) +
+      '<path d="M 172 122 l -16 8 M 178 140 l -16 10" stroke="#B62233" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="268" y="72" font-size="32" font-weight="bold" fill="#B62233">!</text>';
+  } else {
+    s += persona(80, 52, { oficina: true });
+  }
+  return s + '</svg>';
+}
+
+function sceneF9() {
+  return SVGO + fondo("#F2F1EC", "#D8D5CC") +
+    '<rect x="40" y="46" width="120" height="70" rx="4" fill="#37474F"/><rect x="48" y="54" width="104" height="54" fill="#B3D4F0"/>' +
+    '<circle cx="420" cy="60" r="24" fill="#fff" stroke="#546E7A" stroke-width="3"/>' +
+    '<line x1="420" y1="60" x2="420" y2="44" stroke="#37474F" stroke-width="3"/><line x1="420" y1="60" x2="432" y2="68" stroke="#37474F" stroke-width="3"/>' +
+    '<ellipse cx="250" cy="196" rx="150" ry="38" fill="#8D6E63"/><ellipse cx="250" cy="188" rx="150" ry="38" fill="#A1887F"/>' +
+    '<circle cx="150" cy="140" r="12" fill="#D9A066"/><rect x="138" y="152" width="24" height="20" rx="6" fill="#607D8B"/>' +
+    '<circle cx="250" cy="132" r="12" fill="#C68B59"/><rect x="238" y="144" width="24" height="20" rx="6" fill="#455A64"/>' +
+    '<circle cx="350" cy="140" r="12" fill="#E0AC7E"/><rect x="338" y="152" width="24" height="20" rx="6" fill="#795548"/>' +
+    persona(432, 150, { oficina: true }) + '</svg>';
+}
+
+/* ---------- Paquete de contenido ---------- */
+const PACK = {
+  titulo: "Turno Seguro",
+  /* Personalización por empresa: nombre, color de acento (hex) y logo (emoji o texto corto).
+     También editable desde el panel administrador (queda guardado en este dispositivo). */
+  empresa: { nombre: "", color: "", logo: "" },
+  /* PIN del panel administrador. Cámbialo antes de usar el juego con trabajadores. */
+  adminPin: "2026",
+  escenarios: [
+    {
+      id: "O1", mundo: "operativo", titulo: "Ingreso a planta", zona: "Vestier · Mundo operativo",
+      escena: sceneO1,
+      previ: "¡Buen turno! Al otro lado de esa puerta empieza la zona operativa. ¿Qué hacemos primero?",
+      decisiones: [
+        { t: "Entrar directo, voy tarde", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Zona de riesgo. No puedes ingresar sin protección.",
+          exp: "Nadie llega “tarde” a un accidente: llega de una vez. La señal de la puerta te dice exactamente qué EPP necesitas." },
+        { t: "Ponerme solo el casco y entrar", tipo: "insegura", pts: -10, bien: -10,
+          alerta: "EPP incompleto. La zona exige protección completa.",
+          exp: "Un EPP incompleto deja el resto del cuerpo expuesto. La protección es un kit, no una pieza." },
+        { t: "Ponerme el EPP completo según la señal", tipo: "segura", pts: 10,
+          fb: "¡Decisión segura! La señal de la puerta es tu lista de chequeo." },
+        { t: "EPP completo y preguntar qué riesgos hay hoy", tipo: "segura_plus", pts: 25,
+          fb: "¡Así se empieza un turno! Preguntar por los riesgos antes de entrar te pone en modo prevención." }
+      ],
+      kit: true,
+      regla: "Zona operativa = EPP completo, siempre."
+    },
+    {
+      id: "O2", mundo: "operativo", titulo: "Caída de objetos", zona: "Bodega · Mundo operativo",
+      escena: sceneO2,
+      previ: "Necesitamos cruzar la bodega. Mira bien antes de avanzar… ¿algo te llama la atención ahí arriba?",
+      decisiones: [
+        { t: "Cruzar rápido por el centro", tipo: "insegura_grave", pts: -10, bien: -20,
+          alerta: "Casi-accidente: una caja cayó a centímetros de tu casco.",
+          exp: "El casco te salvó esta vez, pero el sendero peatonal existe para que ni siquiera lo necesite." },
+        { t: "Cruzar mirando el celular", tipo: "insegura_grave", pts: -10, bien: -20,
+          alerta: "Casi-accidente: no viste la caja que cayó justo frente a ti.",
+          exp: "El celular en zonas operativas roba la atención que te mantiene a salvo. Guárdalo hasta salir." },
+        { t: "Ir por el sendero demarcado, con el casco puesto", tipo: "segura", pts: 10,
+          fb: "Sendero peatonal + casco: doble barrera de protección." },
+        { t: "Ir por el sendero y reportar la caja mal apilada", tipo: "segura_plus", pts: 20, reporte: true,
+          fb: "¡Cultura preventiva! No solo te cuidaste tú: cuidaste al compañero que viene detrás." }
+      ],
+      regla: "Bajo carga suspendida, nunca te pares."
+    },
+    {
+      id: "O3", mundo: "operativo", titulo: "Trabajo en alturas", zona: "Mantenimiento · Mundo operativo",
+      escena: sceneO3,
+      previ: "Piden cambiar esa luminaria dañada. Está a cuatro metros: esto ya es trabajo en alturas. Piensa antes de subir.",
+      decisiones: [
+        { t: "Subir por las estibas, es un momentico", tipo: "insegura_grave", pts: -20, bien: -30,
+          alerta: "Accidente grave evitado en la simulación. En la vida real, una caída de 4 metros puede ser fatal.",
+          exp: "“Un momentico” es como empiezan los peores accidentes. Alturas exige autorización, equipo certificado y capacitación." },
+        { t: "Usar la escalera sin arnés, tengo buen equilibrio", tipo: "insegura_grave", pts: -20, bien: -30,
+          alerta: "Accidente grave evitado en la simulación. Una caída de altura no perdona la confianza.",
+          exp: "El equilibrio no es un elemento de protección. Sin arnés y línea de vida, no hay trabajo en alturas." },
+        { t: "Arnés, línea de vida y verificar el permiso de trabajo", tipo: "segura", pts: 10,
+          fb: "Autorización, equipo certificado y capacitación: las tres llaves de las alturas." },
+        { t: "Llamar al supervisor: no tengo el curso de alturas", tipo: "segura_plus", pts: 25,
+          fb: "Decir “no estoy capacitado” no te hace menos: te hace confiable." }
+      ],
+      regla: "Sin permiso y sin arnés, no subes.",
+      quiz: {
+        pregunta: "¿Qué se necesita SIEMPRE antes de un trabajo en alturas?",
+        opciones: ["Buen equilibrio y mucho cuidado", "Permiso de trabajo, equipo certificado y capacitación", "Subir acompañado de un compañero"],
+        correcta: 1, pts: 10
+      }
+    },
+    {
+      id: "O4", mundo: "operativo", titulo: "Protección visual", zona: "Taller · Mundo operativo",
+      escena: sceneO4,
+      previ: "Hay que pulir esa pieza metálica. La pulidora lanza partículas a gran velocidad. ¿Cómo lo haces?",
+      decisiones: [
+        { t: "Pulir sin gafas, es una pieza pequeña", tipo: "insegura", pts: -10, bien: -15, efecto: "blur",
+          alerta: "Una partícula salió disparada directo hacia tus ojos.",
+          exp: "Tus ojos son irremplazables. Las partículas no avisan: la protección visual va puesta ANTES de encender." },
+        { t: "Usar mis gafas oscuras de sol", tipo: "insegura", pts: -10, bien: -10,
+          alerta: "Las gafas de sol no resisten impactos.",
+          exp: "Solo las gafas de seguridad certificadas resisten el impacto de partículas. Las de sol se rompen hacia adentro." },
+        { t: "Ponerme gafas de seguridad y verificar la guarda", tipo: "segura", pts: 10,
+          fb: "Protección visual + guarda de la máquina: así se pule." },
+        { t: "Verificar el procedimiento y el estado del equipo antes de empezar", tipo: "segura_plus", pts: 20,
+          fb: "Revisar antes de operar es la marca de un trabajador experto." }
+      ],
+      regla: "Tus ojos no se reponen: gafas siempre."
+    },
+    {
+      id: "O5", mundo: "operativo", titulo: "Sustancias químicas", zona: "Área de químicos · Mundo operativo",
+      escena: sceneO5,
+      previ: "Necesitamos preparar una dilución de este producto industrial. El bidón tiene un pictograma de peligro. ¿Qué haces primero?",
+      decisiones: [
+        { t: "Destaparlo y olerlo para saber qué es", tipo: "insegura", pts: -10, bien: -20,
+          alerta: "Inhalaste vapores irritantes.",
+          exp: "Nunca huelas un químico para identificarlo. Para eso existen la etiqueta y la ficha de datos de seguridad (FDS)." },
+        { t: "Mezclarlo rápido, siempre se usa el mismo", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Mezclaste sin verificar: reacción inesperada.",
+          exp: "“Siempre se ha hecho así” no es un control. Cada producto tiene su etiqueta y su FDS: léelas cada vez." },
+        { t: "Leer la etiqueta, revisar la FDS y usar guantes y respirador", tipo: "segura", pts: 10,
+          fb: "Etiqueta → FDS → EPP. La secuencia correcta, siempre." },
+        { t: "Protegerme y además verificar que haya ventilación", tipo: "segura_plus", pts: 20,
+          fb: "Controlaste la fuente Y el medio. Nivel experto en químicos." }
+      ],
+      regla: "Primero la etiqueta, después el envase."
+    },
+    {
+      id: "O6", mundo: "operativo", titulo: "Zona de ruido", zona: "Sala de compresores · Mundo operativo",
+      escena: sceneO6,
+      previ: "Toca pasar por la sala de compresores. La señal marca 95 decibeles. ¿Cómo entras?",
+      decisiones: [
+        { t: "Entrar normal, es solo un momento", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "95 dB dañan tu audición incluso en exposiciones cortas.",
+          exp: "La pérdida auditiva es gradual, silenciosa e irreversible. La señal de la puerta no es decorativa." },
+        { t: "Entrar con mis audífonos de música a todo volumen", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Los audífonos de música NO protegen: suman más ruido.",
+          exp: "Música encima del ruido industrial es doble dosis para tu oído. Protector auditivo certificado, siempre." },
+        { t: "Ponerme los protectores auditivos de copa", tipo: "segura", pts: 10,
+          fb: "Protección adecuada para la zona señalizada." },
+        { t: "Protectores puestos y permanecer solo el tiempo necesario", tipo: "segura_plus", pts: 20,
+          fb: "Protección + menor exposición: dominas la jerarquía de controles." }
+      ],
+      regla: "Zona con señal de ruido = oídos protegidos."
+    },
+    {
+      id: "O7", mundo: "operativo", titulo: "Montacargas y tránsito", zona: "Muelle · Mundo operativo",
+      escena: sceneO7,
+      previ: "Para llegar al muelle hay que cruzar el pasillo de montacargas. Viene uno cargado. ¿Por dónde cruzas?",
+      decisiones: [
+        { t: "Cruzar por donde estoy, el operador me verá", tipo: "insegura_grave", pts: -10, bien: -25,
+          alerta: "Casi-accidente: el montacargas frenó a un metro de ti.",
+          exp: "Un operador con carga elevada tiene puntos ciegos enormes. No supongas que te ve: asegúrate." },
+        { t: "Cruzar por el sendero, pero mirando el celular", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Ibas por el sendero, pero no viste el montacargas que giraba.",
+          exp: "El sendero protege solo si vas atento. Celular guardado en zonas de tránsito." },
+        { t: "Usar el sendero peatonal y respetar la señalización", tipo: "segura", pts: 10,
+          fb: "El sendero peatonal es tu carril seguro." },
+        { t: "Sendero + contacto visual con el operador antes de cruzar", tipo: "segura_plus", pts: 20,
+          fb: "Contacto visual: el operador te vio y tú lo viste. Cruce 100% seguro." }
+      ],
+      regla: "Cruce peatonal + mirada al operador.",
+      quiz: {
+        pregunta: "¿Cuál es la forma más segura de cruzar una zona de montacargas?",
+        opciones: ["Rápido y por el camino más corto", "Por el sendero peatonal y con contacto visual con el operador", "Por detrás del montacargas, donde ya pasó"],
+        correcta: 1, pts: 10
+      }
+    },
+    {
+      id: "O8", mundo: "operativo", titulo: "Herramientas", zona: "Taller · Mundo operativo",
+      escena: sceneO8,
+      previ: "Debes perforar unas láminas. El taladro disponible tiene el cable pelado y la guarda floja. ¿Qué haces?",
+      decisiones: [
+        { t: "Usarlo con cuidado, es rapidito", tipo: "insegura", pts: -10, bien: -20,
+          alerta: "La herramienta vibró y se apagó: falla eléctrica.",
+          exp: "Una herramienta defectuosa es un accidente en cola de espera. “Con cuidado” no es un control." },
+        { t: "Quitarle la guarda que estorba y trabajar", tipo: "insegura_grave", pts: -20, bien: -25,
+          alerta: "Las guardas existen por los accidentes que ya ocurrieron.",
+          exp: "Retirar una guarda de seguridad es una de las causas más comunes de atrapamientos y cortes." },
+        { t: "Buscar una herramienta en buen estado y revisarla antes de usar", tipo: "segura", pts: 10,
+          fb: "Inspección preoperacional: 30 segundos que valen una mano." },
+        { t: "Reportar el taladro dañado y etiquetarlo fuera de servicio", tipo: "segura_plus", pts: 20, reporte: true,
+          fb: "Lo sacaste de circulación: nadie más se arriesgará con él." }
+      ],
+      regla: "Herramienta defectuosa: se reporta, no se usa."
+    },
+    {
+      id: "O9", mundo: "operativo", titulo: "Riesgo eléctrico", zona: "Pasillo técnico · Mundo operativo",
+      escena: sceneO9,
+      previ: "Hay un cable de potencia suelto en el piso, cerca de un charco. ¿Qué haces?",
+      decisiones: [
+        { t: "Moverlo con la mano hacia un lado", tipo: "insegura_grave", pts: -20, bien: -30,
+          alerta: "Descarga eléctrica evitada en la simulación. En la vida real podría ser fatal.",
+          exp: "Nunca toques un cable suelto: no sabes si está energizado. Eso es trabajo de personal autorizado." },
+        { t: "Seguir derecho, alguien lo arreglará", tipo: "insegura", pts: -20, bien: -10,
+          alerta: "Ignoraste una señal clara de peligro.",
+          exp: "Ignorar un riesgo eléctrico lo deja armado para el siguiente que pase. Si lo ves, actúas." },
+        { t: "Alejarme y llamar al personal eléctrico autorizado", tipo: "segura", pts: 10,
+          fb: "Distancia + personal autorizado: lo eléctrico no se improvisa." },
+        { t: "Señalizar la zona, alejarme y reportar al área eléctrica", tipo: "segura_plus", pts: 20, reporte: true,
+          fb: "Señalizar + reportar: contuviste el riesgo sin exponerte." }
+      ],
+      regla: "Cable suelto: señaliza, aléjate, reporta."
+    },
+    {
+      id: "O10", mundo: "operativo", titulo: "Emergencia y evacuación", zona: "Planta · Mundo operativo",
+      escena: sceneO10,
+      previ: "¡Suena la alarma de evacuación y no es un simulacro anunciado! ¿Qué haces?",
+      decisiones: [
+        { t: "Correr hacia la salida empujando", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Corriendo provocaste una caída en cadena en la salida.",
+          exp: "Correr en una evacuación causa más lesiones que muchas emergencias. Paso firme y rápido, sin correr." },
+        { t: "Devolverme por mi celular y mis llaves", tipo: "insegura", pts: -20, bien: -20,
+          alerta: "Perdiste minutos críticos: ignoraste el protocolo.",
+          exp: "Ningún objeto vale más que tu tiempo de evacuación. Se sale con lo puesto." },
+        { t: "Seguir la ruta señalizada hasta el punto de encuentro", tipo: "segura", pts: 10,
+          fb: "Ruta + punto de encuentro: evacuación de manual." },
+        { t: "Seguir la ruta y ayudar a un compañero sin ponerme en riesgo", tipo: "segura_plus", pts: 20,
+          fb: "Ayudar sin exponerte: así actúa un líder en emergencias." }
+      ],
+      regla: "Calma, ruta señalizada, punto de encuentro."
+    },
+    {
+      id: "F1", mundo: "oficina", titulo: "Puesto de trabajo", zona: "Oficina · Mundo administrativo",
+      escena: function () { return sceneOficina("F1"); },
+      previ: "Segunda parte del turno: te esperan informes en el computador. ¿Cómo organizas tu puesto antes de empezar?",
+      decisiones: [
+        { t: "Sentarme como caiga, hay afán", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Tu espalda protestó a la primera hora de trabajo.",
+          exp: "La mala postura no duele hoy: cobra en semanas. Ajustar el puesto toma 2 minutos." },
+        { t: "Trabajar desde el sofá con el portátil en las piernas", tipo: "insegura", pts: -10, bien: -10,
+          alerta: "Cuello flexionado + pantalla baja = tensión asegurada.",
+          exp: "El portátil en las piernas obliga a mirar hacia abajo todo el día. Tu cuello paga la cuenta." },
+        { t: "Ajustar silla, espalda apoyada, pantalla a la altura de los ojos y pies firmes", tipo: "segura", pts: 10,
+          fb: "Puesto ajustado: tu cuerpo trabaja contigo, no contra ti." },
+        { t: "Ajustar todo y alternar entre estar de pie y sentado", tipo: "segura_plus", pts: 20,
+          fb: "Postura dinámica: el mejor puesto es el que cambia durante el día." }
+      ],
+      regla: "Pantalla a la altura de tus ojos."
+    },
+    {
+      id: "F2", mundo: "oficina", titulo: "Pausas activas", zona: "Oficina · Mundo administrativo",
+      escena: function () { return sceneOficina("F2"); },
+      previ: "Llevas dos horas sin moverte y quedan varias más. Tu cuerpo empieza a pedir cambio. ¿Qué haces?",
+      decisiones: [
+        { t: "Seguir sin parar, así termino antes", tipo: "insegura", pts: -10, bien: -20,
+          alerta: "Fatiga acumulada: tu concentración cayó en picada.",
+          exp: "Sin pausas no rindes más: rindes peor. El cuerpo pasa factura con fatiga, tensión y errores." },
+        { t: "Pausa de celular: 10 minutos de redes sin moverme", tipo: "insegura", pts: -10, bien: -10,
+          alerta: "Cambiaste de pantalla, pero no descansaste.",
+          exp: "Una pausa activa es de movimiento: el cuello y la espalda necesitan moverse, no otro scroll." },
+        { t: "Hacer 5 minutos de estiramientos de cuello, espalda y brazos", tipo: "segura", pts: 10, bienMas: 15,
+          fb: "Pausa activa completa: energía recuperada. Mira cómo subió tu barra de bienestar." },
+        { t: "Estirar, caminar un poco y programar pausas cada 2 horas", tipo: "segura_plus", pts: 20, bienMas: 15,
+          fb: "Pausas programadas: eso ya es un hábito de autocuidado real." }
+      ],
+      regla: "Cada 2 horas, muévete 5 minutos.",
+      quiz: {
+        pregunta: "¿Qué es una pausa activa?",
+        opciones: ["Revisar redes sociales 10 minutos", "Moverse y estirar el cuerpo unos minutos", "Tomar café sin levantarse del puesto"],
+        correcta: 1, pts: 10
+      }
+    },
+    {
+      id: "F3", mundo: "oficina", titulo: "Salud visual", zona: "Oficina · Mundo administrativo",
+      escena: function () { return sceneOficina("F3"); },
+      previ: "Llevas horas frente a la pantalla, empieza a arder la vista y el sol da directo en el monitor. ¿Qué haces?",
+      decisiones: [
+        { t: "Seguir igual, ya me acostumbré", tipo: "insegura", pts: -10, bien: -15, efecto: "blur",
+          alerta: "Fatiga visual: la pantalla se te nubla.",
+          exp: "La vista cansada no avisa con dolor: avisa con borrosidad, ardor y dolor de cabeza. Los descansos cortos la protegen." },
+        { t: "Subir el brillo al máximo para competir con el sol", tipo: "insegura", pts: -10, bien: -10,
+          alerta: "Más brillo = más deslumbramiento, no más comodidad.",
+          exp: "El problema no es el brillo de la pantalla: es el reflejo. Reubica el monitor o gradúa la persiana." },
+        { t: "Aplicar la regla 20-20-20: cada 20 minutos, mirar lejos 20 segundos", tipo: "segura", pts: 10,
+          fb: "Pausa visual aplicada: tus ojos agradecen." },
+        { t: "Pausas visuales + ajustar la iluminación y parpadear conscientemente", tipo: "segura_plus", pts: 20,
+          fb: "Controlaste pantalla, entorno y hábito. Salud visual completa." }
+      ],
+      regla: "Cada 20 minutos, mira lejos 20 segundos."
+    },
+    {
+      id: "F4", mundo: "oficina", titulo: "Cables y orden", zona: "Pasillo de oficina · Mundo administrativo",
+      escena: function () { return sceneOficina("F4"); },
+      previ: "Alguien conectó un extensor y los cables cruzan el pasillo de la oficina. ¿Qué haces?",
+      decisiones: [
+        { t: "Pasar por encima con cuidado, como todos", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Tropezaste con el cable delante de todos.",
+          exp: "“Todos pasan por ahí” funciona hasta que alguien cae. Las caídas de oficina también incapacitan." },
+        { t: "Ignorarlo, no es mi puesto", tipo: "insegura", pts: -20, bien: -10,
+          alerta: "Ignoraste una condición insegura evidente.",
+          exp: "La seguridad es responsabilidad compartida: si ves el riesgo, actúas o lo reportas." },
+        { t: "Organizar los cables con canaleta o por el borde del pasillo", tipo: "segura", pts: 10,
+          fb: "Orden y aseo: la prevención más barata que existe." },
+        { t: "Asegurar la zona y reportar la condición insegura", tipo: "segura_plus", pts: 20, reporte: true,
+          fb: "Reporte a tiempo: el pasillo vuelve a ser seguro para todos." }
+      ],
+      regla: "Piso libre, oficina segura."
+    },
+    {
+      id: "F5", mundo: "oficina", titulo: "Levantamiento de cajas", zona: "Archivo · Mundo administrativo",
+      escena: function () { return sceneOficina("F5"); },
+      previ: "Hay que bajar tres cajas llenas de archivo al primer piso. Se ven pesadas. ¿Cómo lo haces?",
+      decisiones: [
+        { t: "Cargar las tres de una vez doblando la espalda", tipo: "insegura", pts: -10, bien: -20,
+          alerta: "Punzada lumbar: tu espalda no es un montacargas.",
+          exp: "Levantar mal una carga pesada puede lesionar la zona lumbar en un solo movimiento." },
+        { t: "Una por una, pero doblando la espalda", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Menos peso, misma mala técnica: la espalda sufre igual.",
+          exp: "El problema no es solo el peso: es la técnica. Rodillas flexionadas, espalda recta, carga cerca al cuerpo." },
+        { t: "Flexionar rodillas, carga cerca del cuerpo, una por una", tipo: "segura", pts: 10,
+          fb: "Técnica correcta: las piernas cargan, la espalda acompaña." },
+        { t: "Pedir ayuda o usar el carro de transporte", tipo: "segura_plus", pts: 20,
+          fb: "La carga pesada se comparte o se rueda. Pedir ayuda es criterio, no debilidad." }
+      ],
+      regla: "Dobla las rodillas, no la espalda."
+    },
+    {
+      id: "F6", mundo: "oficina", titulo: "Estrés y carga mental", zona: "Oficina · Mundo administrativo",
+      escena: function () { return sceneOficina("F6"); },
+      previ: "Se acumularon tres entregas para hoy y el correo no para. Sientes que no alcanzas. ¿Qué haces?",
+      decisiones: [
+        { t: "Trabajar sin descanso hasta reventar", tipo: "insegura", pts: -10, bien: -20,
+          alerta: "Tu nivel de estrés se disparó: más errores, menos avance.",
+          exp: "La sobrecarga sostenida no es compromiso: es riesgo psicosocial. El rendimiento cae y los errores suben." },
+        { t: "Aceptar todo en silencio y no decir nada", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Nadie puede ayudarte con lo que no comunicas.",
+          exp: "Comunicar la sobrecarga a tiempo no es quejarse: es gestión del riesgo." },
+        { t: "Priorizar las tareas y hacer pausas breves", tipo: "segura", pts: 10, bienMas: 10,
+          fb: "Orden + pausas: la carga se maneja mejor por partes." },
+        { t: "Priorizar, pausar y comunicar la sobrecarga a mi líder", tipo: "segura_plus", pts: 20, bienMas: 10,
+          fb: "Gestión completa: organizaste el trabajo y activaste apoyo." }
+      ],
+      regla: "Prioriza, pausa y comunica."
+    },
+    {
+      id: "F7", mundo: "oficina", titulo: "Escaleras y pasillos", zona: "Escaleras · Mundo administrativo",
+      escena: sceneF7,
+      previ: "Vas tarde a una reunión en el primer piso y las escaleras están ahí. ¿Cómo bajas?",
+      decisiones: [
+        { t: "Corriendo, son solo dos pisos", tipo: "insegura_grave", pts: -10, bien: -20,
+          alerta: "Casi-caída: te resbalaste en el borde del escalón.",
+          exp: "Las caídas en escaleras son de los accidentes más comunes en oficinas. Ningún retraso justifica una fractura." },
+        { t: "Bajando mientras respondo chats", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Dos escalones sin mirar: suficiente para caer.",
+          exp: "El celular y las escaleras no se mezclan. El mensaje puede esperar 30 segundos." },
+        { t: "Con la mano en el pasamanos y atento", tipo: "segura", pts: 10,
+          fb: "Pasamanos + atención: bajada segura." },
+        { t: "Pasamanos, celular guardado y avisar que llego 2 minutos tarde", tipo: "segura_plus", pts: 20,
+          fb: "Avisar quita el afán, y el afán es el verdadero riesgo." }
+      ],
+      regla: "Pasamanos siempre, celular guardado.",
+      quiz: {
+        pregunta: "¿Cuál es la principal causa de caídas en escaleras de oficina?",
+        opciones: ["Los escalones defectuosos", "El afán y la distracción", "Los zapatos inadecuados"],
+        correcta: 1, pts: 10
+      }
+    },
+    {
+      id: "F8", mundo: "oficina", titulo: "Bebidas y equipos eléctricos", zona: "Oficina · Mundo administrativo",
+      escena: function () { return sceneOficina("F8"); },
+      previ: "Café recién servido. Tu escritorio está lleno: computador, y una multitoma con varios equipos conectados. ¿Dónde lo pones?",
+      decisiones: [
+        { t: "Junto al teclado, como siempre", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Derrame sobre el teclado: equipo apagado y susto eléctrico.",
+          exp: "Líquidos y electricidad no comparten escritorio. Un derrame puede dañar equipos o causar un corto." },
+        { t: "Además, conectar la cafetera a la misma multitoma", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Multitoma sobrecargada: huele a caliente.",
+          exp: "Cada multitoma tiene un límite. Sobrecargarla es la receta de un conato de incendio." },
+        { t: "Ponerlo en una superficie alejada de equipos y cables", tipo: "segura", pts: 10,
+          fb: "Distancia entre líquidos y equipos: riesgo eliminado." },
+        { t: "Alejarlo y revisar que la multitoma no esté sobrecargada", tipo: "segura_plus", pts: 20,
+          fb: "Además del café, controlaste la conexión. Doble prevención." }
+      ],
+      regla: "Líquidos lejos, conexiones sin sobrecargar."
+    },
+    {
+      id: "F9", mundo: "oficina", titulo: "Reunión larga", zona: "Sala de reuniones · Mundo administrativo",
+      escena: sceneF9,
+      previ: "Reunión de tres horas. Llevas hora y media sin moverte y la atención se escapa. ¿Qué haces?",
+      decisiones: [
+        { t: "Aguantar inmóvil hasta el final", tipo: "insegura", pts: -10, bien: -15,
+          alerta: "Fatiga y cero atención: la reunión te pasó por encima.",
+          exp: "El cuerpo inmóvil apaga la mente. Las micro pausas también son autocuidado." },
+        { t: "Revisar el celular por debajo de la mesa", tipo: "insegura", pts: -10, bien: -10,
+          alerta: "Ni descansaste ni atendiste.",
+          exp: "Distraerse no es pausar. Un cambio de postura vale más que veinte scrolls." },
+        { t: "Cambiar de postura y hacer micro pausas discretas", tipo: "segura", pts: 10, bienMas: 10,
+          fb: "Micro pausas: circulación y atención de vuelta." },
+        { t: "Proponer una pausa breve de 5 minutos para todos", tipo: "segura_plus", pts: 20, bienMas: 10,
+          fb: "Cuidaste al equipo completo: liderazgo de bienestar." }
+      ],
+      regla: "Las micro pausas también cuentan."
+    },
+    {
+      id: "F10", mundo: "oficina", titulo: "Cierre de jornada", zona: "Oficina · Fin del turno",
+      escena: function () { return sceneOficina("F10"); },
+      previ: "Fin del turno. Mira tu puesto: equipos encendidos, un cajón abierto, un cargador conectado. ¿Cómo cierras el día?",
+      decisiones: [
+        { t: "Salir ya, mañana organizo", tipo: "insegura", pts: -10, bien: -10,
+          alerta: "Equipos encendidos toda la noche: riesgo eléctrico innecesario.",
+          exp: "El cierre seguro toma 3 minutos y evita riesgos nocturnos (y sustos en la factura de energía)." },
+        { t: "Apagar solo el computador y salir", tipo: "insegura", pts: -10, bien: -5,
+          alerta: "Cierre a medias: cargadores calientes y cajones abiertos siguen siendo riesgo.",
+          exp: "Un cajón abierto a la altura de la canilla y un cargador conectado: pequeños riesgos, grandes tropiezos." },
+        { t: "Apagar equipos, cerrar cajones y ordenar el puesto", tipo: "segura", pts: 10,
+          fb: "Puesto cerrado y seguro: así se termina un turno." },
+        { t: "Cierre completo y reportar las condiciones inseguras que viste hoy", tipo: "segura_plus", pts: 20, reporte: true,
+          fb: "Cerraste tu puesto y dejaste la empresa más segura que como la encontraste." }
+      ],
+      regla: "La seguridad también se apaga y se ordena."
+    }
+  ],
+  kitItems: [
+    { n: "Casco", ico: "⛑️", ok: true },
+    { n: "Gafas de seguridad", ico: "🥽", ok: true },
+    { n: "Chaleco reflectivo", ico: "🦺", ok: true },
+    { n: "Botas de seguridad", ico: "🥾", ok: true },
+    { n: "Protección auditiva", ico: "🎧", ok: true },
+    { n: "Gorra deportiva", ico: "🧢", ok: false },
+    { n: "Audífonos de música", ico: "🎵", ok: false },
+    { n: "Sandalias", ico: "🩴", ok: false }
+  ],
+  insignias: [
+    { id: "guardian", n: "Guardián del Casco", ico: "⛑️", req: ["O1", "O2"] },
+    { id: "maestro", n: "Maestro de Alturas", ico: "🪜", req: ["O3"] },
+    { id: "quimico", n: "Experto en Químicos", ico: "🧪", req: ["O5"] },
+    { id: "peaton", n: "Peatón Consciente", ico: "🚸", req: ["O7"] },
+    { id: "aguila", n: "Ojo de Águila", ico: "🦅" },
+    { id: "reportero", n: "Reportero de Condiciones Inseguras", ico: "📣" },
+    { id: "ergonomica", n: "Oficina Ergonómica", ico: "💺", req: ["F1", "F5"] },
+    { id: "pausas", n: "Campeón de Pausas Activas", ico: "🤸", req: ["F2"] },
+    { id: "cero", n: "Cero Accidentes", ico: "🏆" },
+    { id: "lider", n: "Líder del Autocuidado", ico: "⭐" }
+  ]
+};
+
+const MODOS = {
+  completo: { label: "Turno completo", filtro: function () { return true; } },
+  operativo: { label: "Mundo operativo", filtro: function (e) { return e.mundo === "operativo"; } },
+  oficina: { label: "Mundo oficina", filtro: function (e) { return e.mundo === "oficina"; } }
+};
+
+/* ---------- Estado ---------- */
+let S = null;
+function resetState(modo) {
+  modo = modo || "completo";
+  const plan = [];
+  PACK.escenarios.forEach(function (e, i) { if (MODOS[modo].filtro(e)) plan.push(i); });
+  S = { nombre: "", avatar: "👷", modo: modo, plan: plan, pos: 0,
+        puntos: 0, bien: 100, racha: 0,
+        errores: {}, totalErrores: 0, reportes: 0,
+        kitPerfecto: false, kitHecho: false, quizFallos: [], max: 0 };
+  S.max = plan.reduce(function (acc, i) {
+    const e = PACK.escenarios[i];
+    let m = Math.max.apply(null, e.decisiones.map(function (d) { return d.pts; }));
+    if (e.kit) m += 15;
+    if (e.quiz) m += e.quiz.pts;
+    return acc + m;
+  }, 0);
+}
+function escActual() { return PACK.escenarios[S.plan[S.pos]]; }
+const app = document.getElementById("app");
+const clamp = function (v) { return Math.max(0, Math.min(100, v)); };
+const letras = ["A", "B", "C", "D"];
+
+/* ---------- Branding por empresa ---------- */
+function shade(hex, f) {
+  /* f > 0 aclara hacia blanco, f < 0 oscurece hacia negro */
+  const n = hex.replace("#", "");
+  const partes = n.length === 3
+    ? n.split("").map(function (c) { return c + c; })
+    : [n.slice(0, 2), n.slice(2, 4), n.slice(4, 6)];
+  return "#" + partes.map(function (h) {
+    let v = parseInt(h, 16);
+    v = f < 0 ? Math.round(v * (1 + f)) : Math.round(v + (255 - v) * f);
+    return ("0" + Math.max(0, Math.min(255, v)).toString(16)).slice(-2);
+  }).join("");
+}
+function applyBrand() {
+  try {
+    const guardada = JSON.parse(localStorage.getItem("ts_empresa") || "null");
+    if (guardada) Object.assign(PACK.empresa, guardada);
+  } catch (e) { /* config corrupta: se ignora */ }
+  const c = PACK.empresa.color;
+  if (c && /^#[0-9a-fA-F]{3,6}$/.test(c)) {
+    const r = document.documentElement.style;
+    r.setProperty("--green", c);
+    r.setProperty("--green-hi", shade(c, 0.18));
+    r.setProperty("--green-deep", shade(c, -0.38));
+    r.setProperty("--green-soft", shade(c, 0.88));
+  }
+}
+
+/* ---------- Audio ---------- */
+let audioCtx = null, muted = false;
+function tone(seq) {
+  if (muted) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let t = audioCtx.currentTime;
+    seq.forEach(function (p) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = p.w || "sine"; o.frequency.value = p.f;
+      g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + p.d);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + p.d); t += p.d * 0.85;
+    });
+  } catch (e) { /* sin audio */ }
+}
+const sndOk = function () { tone([{ f: 523, d: 0.12 }, { f: 784, d: 0.2 }]); };
+const sndBad = function () { tone([{ f: 330, d: 0.15 }, { f: 196, d: 0.3 }]); };
+const sndAlert = function () { tone([{ f: 880, d: 0.1, w: "square" }, { f: 880, d: 0.1, w: "square" }]); };
+const sndBadge = function () { tone([{ f: 523, d: 0.1 }, { f: 659, d: 0.1 }, { f: 1047, d: 0.25 }]); };
+function toggleMute() {
+  muted = !muted;
+  const b = document.getElementById("muteBtn");
+  if (b) b.textContent = muted ? "🔇" : "🔊";
+}
+
+/* ---------- HUD y mapa ---------- */
+function hud() {
+  const cls = S.bien < 30 ? "low" : (S.bien < 60 ? "warn" : "");
+  return '<div class="hud">' +
+    '<span class="avatar">' + S.avatar + '</span>' +
+    '<span class="pts">' + S.puntos + ' pts</span>' +
+    '<div class="bien"><div class="label">Bienestar ' + S.bien + '%</div>' +
+    '<div class="bar ' + cls + '"><div style="width:' + S.bien + '%"></div></div></div>' +
+    '<button class="icobtn" onclick="showMapaModal()" aria-label="Ver mapa">🗺️</button>' +
+    '<button class="icobtn" id="muteBtn" onclick="toggleMute()" aria-label="Silenciar">' + (muted ? "🔇" : "🔊") + '</button>' +
+    '</div>' +
+    '<div class="progress"><span>Escena ' + (S.pos + 1) + ' de ' + S.plan.length + ' · ' + MODOS[S.modo].label + '</span>' +
+    (S.racha >= 3 ? '<span class="racha">🔥 Racha Segura +5</span>' : '') + '</div>';
+}
+
+function mapaHTML() {
+  let html = "", mundoPrev = "";
+  S.plan.forEach(function (idx, p) {
+    const e = PACK.escenarios[idx];
+    if (e.mundo !== mundoPrev) {
+      mundoPrev = e.mundo;
+      html += '<div class="mapa-mundo">' + (e.mundo === "operativo" ? "🏭 Mundo Operativo" : "💼 Mundo Oficina") + '</div>';
+    }
+    const estado = p < S.pos ? "done" : (p === S.pos ? "actual" : "lock");
+    const ico = p < S.pos ? "✅" : (p === S.pos ? "▶️" : "🔒");
+    html += '<div class="mapa-item ' + estado + '"><span>' + ico + '</span><span>' + e.titulo + '</span></div>';
+  });
+  return html;
+}
+function showMapaModal() {
+  showModal("info",
+    '<h2>🗺️ Mapa del turno</h2>' + mapaHTML() +
+    '<button class="btn" onclick="closeModal()">Seguir jugando</button>');
+}
+
+/* ---------- Pantallas ---------- */
+function renderHome() {
+  const emp = PACK.empresa;
+  app.innerHTML =
+    '<div class="home">' +
+    '<div class="hero-icons" aria-hidden="true"><span>⛑️</span><span>🥽</span><span>🦺</span><span>🧤</span><span>🥾</span><span>🎧</span></div>' +
+    '<div class="logo">' + (emp.logo ? '<span style="font-size:64px">' + emp.logo + '</span>' : previSVG(96)) + '</div>' +
+    '<h1>' + PACK.titulo + '<span class="dot">.</span></h1>' +
+    (emp.nombre ? '<p class="empresa-nombre">' + esc(emp.nombre) + '</p>' : '') +
+    '<div class="mini-hazard" aria-hidden="true"></div>' +
+    '<p class="tagline">Misión: cero accidentes. Termina tu turno igual que empezaste: completo y sano.</p>' +
+    '<button class="btn" onclick="renderSetup(\'completo\')">▶ Iniciar misión (turno completo)</button>' +
+    '<button class="btn sec" onclick="renderModos()">🌍 Seleccionar mundo</button>' +
+    '<button class="btn sec" onclick="renderAprende()">📘 Aprender antes de jugar</button>' +
+    '<button class="btn sec" onclick="renderHistorial()">📊 Resultados</button>' +
+    '<button class="btn sec" onclick="renderAdminPin()">🔐 Administrador</button>' +
+    '<p class="brand">Prototipo MVP · 20 escenarios · 2 mundos<br>' +
+    (emp.nombre ? 'Versión personalizada para ' + esc(emp.nombre) : 'Personalizable por empresa (edita PACK.empresa)') + '</p>' +
+    '</div>';
+}
+
+function renderModos() {
+  app.innerHTML =
+    '<div class="card" style="border-top:8px solid var(--blue)">' +
+    '<h2 style="margin-top:0">🌍 Elige tu recorrido</h2>' +
+    '<button class="btn" onclick="renderSetup(\'completo\')">🏭+💼 Turno completo <span style="font-weight:400">(20 escenas · ~20-25 min)</span></button>' +
+    '<button class="btn blue" onclick="renderSetup(\'operativo\')">🏭 Solo mundo operativo <span style="font-weight:400">(10 escenas)</span></button>' +
+    '<button class="btn blue" onclick="renderSetup(\'oficina\')">💼 Solo mundo oficina <span style="font-weight:400">(10 escenas)</span></button>' +
+    '<button class="btn sec" onclick="renderHome()">Volver</button>' +
+    '</div>';
+}
+
+function renderAprende() {
+  app.innerHTML =
+    '<div class="card" style="border-top:8px solid var(--blue)">' +
+    '<h2 style="margin-top:0">Antes de entrar al turno</h2>' +
+    '<div class="previ-row"><div class="previ-bot">' + previSVG() + '</div>' +
+    '<div class="bubble"><strong>PREVI:</strong> Soy tu asistente de seguridad. Te acompaño durante todo el turno. Recuerda:</div></div>' +
+    '<ul style="font-size:15px;line-height:1.8">' +
+    '<li><span class="tag g">+10 a +25</span> por decisiones seguras, identificar peligros y <strong>reportar</strong>.</li>' +
+    '<li><span class="tag r">−10 a −20</span> por actos inseguros o ignorar señales.</li>' +
+    '<li>Tu <strong>barra de bienestar</strong> baja con cada decisión insegura (y las pausas activas la recuperan).</li>' +
+    '<li>Equivocarse no termina el juego: <strong>repites la escena y aprendes</strong>.</li>' +
+    '<li>3 aciertos seguidos activan la <strong>🔥 Racha Segura</strong> (+5 extra).</li>' +
+    '</ul>' +
+    '<button class="btn" onclick="renderSetup(\'completo\')">Entendido, ¡a jugar!</button>' +
+    '<button class="btn sec" onclick="renderHome()">Volver</button>' +
+    '</div>';
+}
+
+function renderSetup(modo) {
+  resetState(modo);
+  app.innerHTML =
+    '<div class="card">' +
+    '<h2 style="margin-top:0">Tu personaje</h2>' +
+    '<p style="margin:0 0 8px"><span class="tag b">' + MODOS[modo].label + ' · ' + S.plan.length + ' escenas</span></p>' +
+    '<label for="nombre" style="font-weight:600">¿Cómo te llamas?</label>' +
+    '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
+    '<div style="font-weight:600">Elige tu avatar</div>' +
+    '<div class="avatars">' +
+    ["👷", "👷‍♀️", "🧑‍🏭", "👩‍💼"].map(function (a, i) {
+      return '<button class="' + (i === 0 ? "sel" : "") + '" onclick="pickAvatar(this,\'' + a + '\')">' + a + '</button>';
+    }).join("") +
+    '</div>' +
+    '<button class="btn" onclick="startGame()">Ver el mapa del turno</button>' +
+    '<button class="btn sec" onclick="renderHome()">Volver</button>' +
+    '</div>';
+}
+function pickAvatar(btn, a) {
+  S.avatar = a;
+  document.querySelectorAll(".avatars button").forEach(function (b) { b.classList.remove("sel"); });
+  btn.classList.add("sel");
+}
+function startGame() {
+  const n = document.getElementById("nombre").value.trim();
+  S.nombre = n || "Jugador(a)";
+  renderMapa();
+}
+function renderMapa() {
+  app.innerHTML =
+    '<div class="card" style="border-top:8px solid var(--yellow)">' +
+    '<h2 style="margin-top:0">🗺️ Mapa del turno de ' + esc(S.nombre) + '</h2>' +
+    mapaHTML() +
+    '<button class="btn" onclick="renderScene()">Comenzar el turno</button>' +
+    '</div>';
+  window.scrollTo(0, 0);
+}
+
+function renderScene() {
+  const e = escActual();
+  app.innerHTML = hud() +
+    '<div class="zona">' + e.zona + '</div>' +
+    '<div class="scene-wrap" id="sceneWrap">' + e.escena(false) + '</div>' +
+    '<div class="previ-row"><div class="previ-bot">' + previSVG() + '</div>' +
+    '<div class="bubble"><strong>PREVI:</strong> ' + e.previ + '</div></div>' +
+    '<div class="decs">' +
+    e.decisiones.map(function (d, i) {
+      return '<button class="dec" onclick="decidir(' + i + ')"><span class="letra">' + letras[i] + '</span><span>' + d.t + '</span></button>';
+    }).join("") +
+    '</div>';
+  window.scrollTo(0, 0);
+}
+
+function decidir(i) {
+  const e = escActual();
+  const d = e.decisiones[i];
+  if (d.tipo.indexOf("insegura") === 0) {
+    S.errores[e.id] = (S.errores[e.id] || 0) + 1;
+    S.totalErrores++;
+    S.racha = 0;
+    S.puntos += d.pts;
+    S.bien = clamp(S.bien + d.bien);
+    const w = document.getElementById("sceneWrap");
+    if (d.tipo === "insegura_grave") {
+      w.innerHTML = e.escena(true);
+      w.classList.add("frozen");
+    } else if (d.efecto === "blur") {
+      w.classList.add("blur");
+    }
+    w.classList.add("shake");
+    const fl = document.createElement("div");
+    fl.className = "flash";
+    document.body.appendChild(fl);
+    setTimeout(function () { fl.remove(); }, 850);
+    sndAlert(); setTimeout(sndBad, 250);
+    showModal("bad",
+      '<h2 class="alerta">⚠️ Alerta de seguridad</h2>' +
+      '<p style="font-weight:600">' + d.alerta + '</p>' +
+      '<div class="delta down">' + d.pts + ' pts &nbsp;·&nbsp; bienestar ' + d.bien + '%</div>' +
+      '<div class="exp"><strong>PREVI:</strong> ' + d.exp + '</div>' +
+      '<button class="btn" onclick="closeModal();renderScene()">Reintentar la escena</button>');
+  } else {
+    let extra = 0;
+    S.racha++;
+    if (S.racha >= 3) extra = 5;
+    S.puntos += d.pts + extra;
+    S.bien = clamp(S.bien + (d.bienMas || 5));
+    if (d.reporte) S.reportes++;
+    sndOk();
+    showModal("ok",
+      '<h2 class="bien">✅ ¡Decisión segura!</h2>' +
+      '<div class="delta up">+' + (d.pts + extra) + ' pts' + (extra ? ' <span style="font-size:15px">(🔥 racha +5)</span>' : '') + '</div>' +
+      '<div class="exp"><strong>PREVI:</strong> ' + d.fb + '</div>' +
+      '<button class="btn" onclick="closeModal();afterSafe()">Continuar</button>');
+  }
+}
+
+function afterSafe() {
+  const e = escActual();
+  if (e.kit && !S.kitHecho) { renderKit(); return; }
+  showRegla();
+}
+
+function showRegla() {
+  const e = escActual();
+  showModal("regla",
+    '<h2>📌 Regla de bolsillo</h2>' +
+    '<p class="regla-txt">“' + e.regla + '”</p>' +
+    '<button class="btn" onclick="closeModal();' + (e.quiz ? 'renderQuiz()' : 'advance()') + '">' +
+    (e.quiz ? 'Pregunta rápida →' : (S.pos + 1 < S.plan.length ? 'Siguiente escena →' : 'Ver mis resultados →')) + '</button>');
+}
+
+function advance() {
+  const anterior = escActual();
+  S.pos++;
+  if (S.pos >= S.plan.length) { renderResults(); return; }
+  const sig = escActual();
+  if (sig.mundo !== anterior.mundo) { renderTransicion(); return; }
+  renderScene();
+}
+
+function renderTransicion() {
+  app.innerHTML =
+    '<div class="card" style="border-top:8px solid var(--blue);text-align:center">' +
+    '<div style="font-size:50px">🧥</div>' +
+    '<h2>Cambio de mundo</h2>' +
+    '<p>Terminaste la parte operativa del turno. Te cambias de ropa y pasas al mundo administrativo…<br><em>Spoiler: la oficina también tiene riesgos.</em></p>' +
+    '<div class="previ-row" style="text-align:left"><div class="previ-bot">' + previSVG() + '</div>' +
+    '<div class="bubble"><strong>PREVI:</strong> Aquí no hay montacargas, pero tu espalda, tus ojos y tu energía siguen en juego. ¡Vamos!</div></div>' +
+    mapaHTML() +
+    '<button class="btn" onclick="renderScene()">Entrar a la oficina</button>' +
+    '</div>';
+  window.scrollTo(0, 0);
+}
+
+/* ---------- Mini-reto: arma tu kit ---------- */
+let kitSel = [];
+function renderKit() {
+  kitSel = [];
+  app.innerHTML = hud() +
+    '<div class="card" style="border-top:8px solid var(--yellow)">' +
+    '<h2 style="margin-top:0">🧰 Mini-reto: arma tu kit</h2>' +
+    '<p>La señal exige <strong>5 elementos</strong> para esta zona. Toca los correctos:</p>' +
+    '<div class="kit-grid">' +
+    PACK.kitItems.map(function (k, i) {
+      return '<button class="kit-item" id="ki' + i + '" onclick="toggleKit(' + i + ')"><span class="ico">' + k.ico + '</span>' + k.n + '</button>';
+    }).join("") +
+    '</div>' +
+    '<button class="btn" onclick="confirmKit()">Confirmar kit (<span id="kn">0</span>/5)</button>' +
+    '</div>';
+  window.scrollTo(0, 0);
+}
+function toggleKit(i) {
+  const p = kitSel.indexOf(i);
+  if (p >= 0) kitSel.splice(p, 1); else kitSel.push(i);
+  document.getElementById("ki" + i).classList.toggle("sel", p < 0);
+  document.getElementById("kn").textContent = kitSel.length;
+}
+function confirmKit() {
+  S.kitHecho = true;
+  const correctos = PACK.kitItems.map(function (k, i) { return k.ok ? i : -1; }).filter(function (i) { return i >= 0; });
+  const perfecto = kitSel.length === correctos.length && correctos.every(function (i) { return kitSel.indexOf(i) >= 0; });
+  PACK.kitItems.forEach(function (k, i) {
+    const el = document.getElementById("ki" + i);
+    if (k.ok) el.classList.add("correcto");
+    else if (kitSel.indexOf(i) >= 0) el.classList.add("errado");
+  });
+  const pts = perfecto ? 15 : 5;
+  S.puntos += pts;
+  if (perfecto) { S.kitPerfecto = true; sndBadge(); } else sndOk();
+  showModal(perfecto ? "ok" : "info",
+    (perfecto
+      ? '<h2 class="bien">🦅 ¡Kit perfecto!</h2><div class="delta up">+15 pts</div><div class="exp"><strong>PREVI:</strong> Identificaste los 5 EPP sin caer en los señuelos. Los audífonos de música NO son protección auditiva.</div>'
+      : '<h2>Kit revisado</h2><div class="delta up">+5 pts</div><div class="exp"><strong>PREVI:</strong> Mira la corrección en pantalla: los 5 correctos quedaron en verde. Ojo con los señuelos, como los audífonos de música.</div>') +
+    '<button class="btn" onclick="closeModal();showRegla()">Continuar</button>');
+}
+
+/* ---------- Pregunta rápida ---------- */
+function renderQuiz() {
+  const q = escActual().quiz;
+  app.innerHTML = hud() +
+    '<div class="card" style="border-top:8px solid var(--blue)">' +
+    '<h2 style="margin-top:0">⚡ Pregunta rápida</h2>' +
+    '<p style="font-size:16.5px;font-weight:600">' + q.pregunta + '</p>' +
+    q.opciones.map(function (o, i) {
+      return '<button class="dec" onclick="answerQuiz(' + i + ')"><span class="letra">' + letras[i] + '</span><span>' + o + '</span></button>';
+    }).join("") +
+    '</div>';
+  window.scrollTo(0, 0);
+}
+function answerQuiz(i) {
+  const e = escActual(), q = e.quiz;
+  const ok = i === q.correcta;
+  if (ok) { S.puntos += q.pts; sndOk(); }
+  else { S.quizFallos.push(e.titulo); sndBad(); }
+  showModal(ok ? "ok" : "bad",
+    (ok
+      ? '<h2 class="bien">✅ ¡Correcto!</h2><div class="delta up">+' + q.pts + ' pts</div><div class="exp"><strong>PREVI:</strong> Lo aprendiste de verdad. Eso es lo que buscamos.</div>'
+      : '<h2 class="alerta">Casi…</h2><div class="exp"><strong>PREVI:</strong> La respuesta era: <strong>' + q.opciones[q.correcta] + '</strong>.</div>') +
+    '<button class="btn" onclick="closeModal();advance()">' + (S.pos + 1 < S.plan.length ? 'Siguiente escena →' : 'Ver mis resultados →') + '</button>');
+}
+
+/* ---------- Resultados ---------- */
+function nivelDe(pct) {
+  if (pct >= 90) return { n: "Líder SST", c: "b" };
+  if (pct >= 70) return { n: "Nivel Seguro", c: "g" };
+  if (pct >= 50) return { n: "Nivel Preventivo", c: "y" };
+  return { n: "Nivel Básico", c: "r" };
+}
+function calcInsignias(pct) {
+  const jugados = {};
+  S.plan.forEach(function (i) { jugados[PACK.escenarios[i].id] = true; });
+  const sinErr = function (ids) {
+    return ids.every(function (id) { return jugados[id]; }) &&
+           ids.every(function (id) { return !S.errores[id]; });
+  };
+  const r = {};
+  PACK.insignias.forEach(function (b) {
+    if (b.req) { r[b.id] = sinErr(b.req); return; }
+    if (b.id === "aguila") r[b.id] = S.kitPerfecto;
+    else if (b.id === "reportero") r[b.id] = S.reportes >= 2;
+    else if (b.id === "cero") r[b.id] = S.totalErrores === 0;
+    else if (b.id === "lider") r[b.id] = S.bien >= 80 && pct >= 85;
+  });
+  return r;
+}
+function renderResults() {
+  const pct = clamp(Math.round((S.puntos / S.max) * 100));
+  const niv = nivelDe(pct);
+  const ins = calcInsignias(pct);
+  const ganadas = PACK.insignias.filter(function (b) { return ins[b.id]; }).length;
+  let reforzar = PACK.escenarios.filter(function (e) { return S.errores[e.id]; }).map(function (e) { return e.titulo; });
+  S.quizFallos.forEach(function (t) { if (reforzar.indexOf(t) < 0) reforzar.push(t + " (pregunta de refuerzo)"); });
+
+  guardarSesion(pct, niv.n);
+  if (ganadas) sndBadge();
+
+  app.innerHTML =
+    '<div class="card res-head">' +
+    '<div style="font-size:38px">' + S.avatar + '</div>' +
+    '<div style="font-weight:700;font-size:19px">' + esc(S.nombre) + ', tu turno terminó</div>' +
+    '<div style="font-size:13px;color:var(--muted)">' + MODOS[S.modo].label + ' · ' + S.plan.length + ' escenas</div>' +
+    '<div class="res-pct" style="color:var(--green)">' + pct + '%</div>' +
+    '<div>' + S.puntos + ' de ' + S.max + ' puntos · Bienestar final: ' + S.bien + '%</div>' +
+    '<div class="nivel tag ' + niv.c + '" style="font-size:16px">' + niv.n + '</div>' +
+    '</div>' +
+    '<div class="card"><h3 style="margin-top:0">🎖️ Insignias (' + ganadas + '/' + PACK.insignias.length + ')</h3><div class="badges">' +
+    PACK.insignias.map(function (b) {
+      return '<div class="badge ' + (ins[b.id] ? '' : 'off') + '"><span class="ico">' + b.ico + '</span>' + b.n + '</div>';
+    }).join("") +
+    '</div></div>' +
+    (reforzar.length
+      ? '<div class="card" style="border-top:6px solid var(--yellow)"><h3 style="margin-top:0">📚 Para reforzar</h3><ul>' +
+        reforzar.map(function (t) { return '<li>' + t + '</li>'; }).join("") + '</ul></div>'
+      : '<div class="card" style="border-top:6px solid var(--green)"><strong>🏆 Turno impecable:</strong> ningún acto inseguro. Así se ve la cultura preventiva.</div>') +
+    '<button class="btn blue" onclick="imprimirCert(' + pct + ',\'' + niv.n + '\')">📄 Descargar constancia</button>' +
+    '<button class="btn" onclick="renderModos()">Jugar de nuevo</button>' +
+    '<button class="btn sec" onclick="renderHome()">Volver al inicio</button>';
+  window.scrollTo(0, 0);
+
+  const sinMovimiento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pctEl = document.querySelector(".res-pct");
+  if (!sinMovimiento && pctEl) {
+    const t0 = performance.now();
+    (function paso(t) {
+      const k = Math.min(1, (t - t0) / 1000);
+      pctEl.textContent = Math.round(pct * (1 - Math.pow(1 - k, 3))) + "%";
+      if (k < 1) requestAnimationFrame(paso);
+    })(t0);
+  }
+  document.querySelectorAll(".badge").forEach(function (b, i) {
+    b.style.animationDelay = (0.15 + i * 0.07) + "s";
+  });
+  if (!sinMovimiento && pct >= 70) lanzarConfeti();
+}
+
+function lanzarConfeti() {
+  const c = document.createElement("div");
+  c.className = "confetti";
+  const colores = ["#00795C", "#F2B705", "#0A5CA8", "#E57373", "#FFD54F", "#4DB6AC"];
+  for (let i = 0; i < 80; i++) {
+    const p = document.createElement("i");
+    p.style.left = (Math.random() * 100) + "%";
+    p.style.background = colores[i % colores.length];
+    p.style.animationDuration = (2.2 + Math.random() * 2) + "s";
+    p.style.animationDelay = (Math.random() * 0.9) + "s";
+    p.style.transform = "rotate(" + Math.round(Math.random() * 360) + "deg)";
+    c.appendChild(p);
+  }
+  document.body.appendChild(c);
+  setTimeout(function () { c.remove(); }, 5500);
+}
+
+/* ---------- Historial y CSV ---------- */
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+function getSesiones() {
+  try { return JSON.parse(localStorage.getItem("ts_sesiones") || "[]"); } catch (e) { return []; }
+}
+function guardarSesion(pct, nivel) {
+  const arr = getSesiones();
+  arr.unshift({ nombre: S.nombre, fecha: new Date().toLocaleString("es-CO"), modo: MODOS[S.modo].label,
+                puntos: S.puntos, pct: pct, nivel: nivel, errores: S.totalErrores, errs: S.errores });
+  localStorage.setItem("ts_sesiones", JSON.stringify(arr.slice(0, 100)));
+}
+function renderHistorial() {
+  const arr = getSesiones();
+  app.innerHTML =
+    '<div class="card"><h2 style="margin-top:0">📊 Resultados guardados</h2>' +
+    (arr.length === 0
+      ? '<p style="color:var(--muted)">Aún no hay partidas registradas en este dispositivo.</p>'
+      : '<div style="overflow-x:auto"><table class="hist"><tr><th>Nombre</th><th>Fecha</th><th>Modo</th><th>Pts</th><th>%</th><th>Nivel</th><th>Err.</th></tr>' +
+        arr.map(function (s) {
+          return '<tr><td>' + esc(s.nombre) + '</td><td>' + esc(s.fecha) + '</td><td>' + esc(s.modo || "—") + '</td><td>' + s.puntos + '</td><td>' + s.pct + '%</td><td>' + esc(s.nivel) + '</td><td>' + s.errores + '</td></tr>';
+        }).join("") + '</table></div>') +
+    (arr.length ? '<button class="btn blue" onclick="exportCSV()">⬇ Exportar CSV</button>' : '') +
+    '<button class="btn sec" onclick="renderHome()">Volver</button>' +
+    '</div>';
+}
+function exportCSV() {
+  const arr = getSesiones();
+  const filas = [["Nombre", "Fecha", "Modo", "Puntos", "Porcentaje", "Nivel", "Errores"]].concat(
+    arr.map(function (s) { return [s.nombre, s.fecha, s.modo || "", s.puntos, s.pct, s.nivel, s.errores]; })
+  );
+  const csv = "﻿" + filas.map(function (f) {
+    return f.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";");
+  }).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "resultados_turno_seguro.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- Constancia ---------- */
+function imprimirCert(pct, nivel) {
+  document.getElementById("cert").innerHTML =
+    '<div class="marco">' +
+    '<div style="font-size:40px">' + (PACK.empresa.logo || "🦺") + '</div>' +
+    '<h1>Constancia de participación</h1>' +
+    '<p>El programa de formación <strong>Turno Seguro</strong> certifica que</p>' +
+    '<div class="nombre">' + esc(S.nombre) + '</div>' +
+    '<p>completó la misión <strong>' + MODOS[S.modo].label + '</strong> (' + S.plan.length + ' escenarios)<br>con enfoque en prevención, EPP, autocuidado y reporte de condiciones inseguras.</p>' +
+    '<div class="datos">' +
+    'Puntaje: <strong>' + S.puntos + ' / ' + S.max + ' (' + pct + '%)</strong><br>' +
+    'Nivel alcanzado: <strong>' + esc(nivel) + '</strong><br>' +
+    'Fecha: <strong>' + new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }) + '</strong><br>' +
+    'Empresa: ' + (PACK.empresa.nombre ? '<strong>' + esc(PACK.empresa.nombre) + '</strong>' : '________________________________') +
+    '</div>' +
+    '<p style="margin-top:36px;font-size:13px;color:#555">Actividad de capacitación y sensibilización — anexo para el plan de formación del SG-SST.</p>' +
+    '</div>';
+  window.print();
+}
+
+/* ---------- Panel administrador ---------- */
+function renderAdminPin() {
+  if (sessionStorage.getItem("ts_admin") === "1") { renderAdmin(); return; }
+  app.innerHTML =
+    '<div class="card" style="border-top:8px solid var(--ink)">' +
+    '<h2 style="margin-top:0">🔐 Acceso administrador</h2>' +
+    '<p style="color:var(--muted);font-size:14px">Panel para el área de SST / Gestión Humana. PIN inicial del prototipo: <code>2026</code> (cámbialo en <code>PACK.adminPin</code> antes de usarlo con trabajadores).</p>' +
+    '<input type="text" id="pin" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">' +
+    '<p id="pinErr" style="color:var(--red);font-weight:600;margin:0"></p>' +
+    '<button class="btn" onclick="checkPin()">Entrar</button>' +
+    '<button class="btn sec" onclick="renderHome()">Volver</button>' +
+    '</div>';
+}
+function checkPin() {
+  const v = document.getElementById("pin").value.trim();
+  if (v === PACK.adminPin) { sessionStorage.setItem("ts_admin", "1"); renderAdmin(); }
+  else { document.getElementById("pinErr").textContent = "PIN incorrecto."; sndBad(); }
+}
+function renderAdmin() {
+  const arr = getSesiones();
+  const tot = arr.length;
+  const prom = tot ? Math.round(arr.reduce(function (a, s) { return a + s.pct; }, 0) / tot) : 0;
+  const niveles = {};
+  arr.forEach(function (s) { niveles[s.nivel] = (niveles[s.nivel] || 0) + 1; });
+  const ordenNiv = ["Líder SST", "Nivel Seguro", "Nivel Preventivo", "Nivel Básico"];
+  const errAgg = {};
+  arr.forEach(function (s) {
+    if (s.errs) Object.keys(s.errs).forEach(function (id) { errAgg[id] = (errAgg[id] || 0) + s.errs[id]; });
+  });
+  const top = Object.keys(errAgg).map(function (id) {
+    const e = PACK.escenarios.find(function (x) { return x.id === id; });
+    return { n: e ? e.titulo : id, c: errAgg[id] };
+  }).sort(function (a, b) { return b.c - a.c; }).slice(0, 6);
+  const maxErr = top.length ? top[0].c : 1;
+  const emp = PACK.empresa;
+
+  app.innerHTML =
+    '<div class="card" style="border-top:8px solid var(--ink)">' +
+    '<h2 style="margin-top:0">🔐 Panel SST</h2>' +
+    '<div style="display:flex;gap:10px;text-align:center">' +
+    '<div style="flex:1"><div style="font-size:30px;font-weight:800">' + tot + '</div><div style="font-size:12px;color:var(--muted)">partidas</div></div>' +
+    '<div style="flex:1"><div style="font-size:30px;font-weight:800;color:var(--green)">' + prom + '%</div><div style="font-size:12px;color:var(--muted)">promedio</div></div>' +
+    '<div style="flex:1"><div style="font-size:30px;font-weight:800;color:var(--red)">' + arr.reduce(function (a, s) { return a + (s.errores || 0); }, 0) + '</div><div style="font-size:12px;color:var(--muted)">actos inseguros</div></div>' +
+    '</div>' +
+    '<h3>Distribución por nivel</h3>' +
+    (tot === 0 ? '<p style="color:var(--muted)">Sin partidas aún.</p>' :
+      ordenNiv.filter(function (n) { return niveles[n]; }).map(function (n) {
+        return '<div class="mapa-item"><span class="tag ' + nivelDe(n === "Líder SST" ? 95 : n === "Nivel Seguro" ? 75 : n === "Nivel Preventivo" ? 55 : 20).c + '">' + n + '</span><span>' + niveles[n] + ' persona(s)</span></div>';
+      }).join("")) +
+    '</div>' +
+    '<div class="card" style="border-top:6px solid var(--red)">' +
+    '<h3 style="margin-top:0">🔥 Escenarios con más errores</h3>' +
+    '<p style="font-size:13px;color:var(--muted);margin-top:0">Aquí está tu plan de refuerzo: estos son los riesgos que el equipo aún no domina.</p>' +
+    (top.length === 0 ? '<p style="color:var(--muted)">Sin datos de errores todavía.</p>' :
+      top.map(function (t) {
+        return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:14px"><span>' + t.n + '</span><strong>' + t.c + '</strong></div>' +
+          '<div class="bar"><div style="width:' + Math.round(t.c / maxErr * 100) + '%;background:var(--red)"></div></div></div>';
+      }).join("")) +
+    '</div>' +
+    '<div class="card" style="border-top:6px solid var(--blue)">' +
+    '<h3 style="margin-top:0">🎨 Marca de la empresa</h3>' +
+    '<label style="font-weight:600;font-size:14px">Nombre</label>' +
+    '<input type="text" id="bNombre" maxlength="60" value="' + esc(emp.nombre) + '" placeholder="Nombre de la empresa">' +
+    '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">' +
+    '<div><label style="font-weight:600;font-size:14px">Color</label><br><input type="color" id="bColor" value="' + (emp.color || "#00795C") + '" style="width:56px;height:38px;border:2px solid var(--line);border-radius:8px;background:var(--surface)"></div>' +
+    '<div style="flex:1"><label style="font-weight:600;font-size:14px">Logo (emoji)</label>' +
+    '<input type="text" id="bLogo" maxlength="4" value="' + esc(emp.logo) + '" placeholder="🦺" style="margin-bottom:0"></div>' +
+    '</div>' +
+    '<button class="btn blue" onclick="guardarBrand()">Guardar marca</button>' +
+    '</div>' +
+    '<button class="btn blue" onclick="exportCSV()">⬇ Exportar resultados (CSV)</button>' +
+    '<button class="btn sec" onclick="renderHistorial()">📊 Ver historial detallado</button>' +
+    '<button class="btn sec" style="color:var(--red);border-color:var(--red)" onclick="confirmarBorrado()">🗑 Borrar todos los resultados</button>' +
+    '<button class="btn sec" onclick="renderHome()">Volver al inicio</button>';
+  window.scrollTo(0, 0);
+}
+function guardarBrand() {
+  const conf = {
+    nombre: document.getElementById("bNombre").value.trim(),
+    color: document.getElementById("bColor").value,
+    logo: document.getElementById("bLogo").value.trim()
+  };
+  localStorage.setItem("ts_empresa", JSON.stringify(conf));
+  Object.assign(PACK.empresa, conf);
+  applyBrand();
+  sndOk();
+  showModal("ok", '<h2 class="bien">✅ Marca guardada</h2><p>La portada, los botones y la constancia ya usan la identidad de ' + (esc(conf.nombre) || "tu empresa") + '.</p>' +
+    '<button class="btn" onclick="closeModal();renderAdmin()">Continuar</button>');
+}
+function confirmarBorrado() {
+  showModal("bad", '<h2 class="alerta">🗑 ¿Borrar todos los resultados?</h2>' +
+    '<p>Se eliminarán las ' + getSesiones().length + ' partidas guardadas en este dispositivo. Esta acción no se puede deshacer. Exporta el CSV antes si necesitas conservarlas.</p>' +
+    '<button class="btn" style="background:var(--red)" onclick="doBorrar()">Sí, borrar todo</button>' +
+    '<button class="btn sec" onclick="closeModal()">Cancelar</button>');
+}
+function doBorrar() {
+  localStorage.removeItem("ts_sesiones");
+  closeModal();
+  renderAdmin();
+}
+
+/* ---------- Modales ---------- */
+function showModal(tipo, html) {
+  closeModal();
+  const ov = document.createElement("div");
+  ov.className = "overlay"; ov.id = "ovl";
+  ov.innerHTML = '<div class="modal ' + tipo + '">' + html + '</div>';
+  document.body.appendChild(ov);
+}
+function closeModal() {
+  const ov = document.getElementById("ovl");
+  if (ov) ov.remove();
+}
+
+/* ---------- Exponer handlers ---------- */
+window.toggleMute = toggleMute; window.renderSetup = renderSetup; window.renderAprende = renderAprende;
+window.renderHome = renderHome; window.renderHistorial = renderHistorial; window.renderModos = renderModos;
+window.pickAvatar = pickAvatar; window.startGame = startGame; window.renderMapa = renderMapa;
+window.renderScene = renderScene; window.decidir = decidir; window.afterSafe = afterSafe;
+window.showRegla = showRegla; window.advance = advance; window.toggleKit = toggleKit;
+window.confirmKit = confirmKit; window.renderQuiz = renderQuiz; window.answerQuiz = answerQuiz;
+window.renderResults = renderResults; window.exportCSV = exportCSV; window.imprimirCert = imprimirCert;
+window.closeModal = closeModal; window.showMapaModal = showMapaModal; window.PACK = PACK;
+window.renderAdminPin = renderAdminPin; window.checkPin = checkPin; window.renderAdmin = renderAdmin;
+window.guardarBrand = guardarBrand; window.confirmarBorrado = confirmarBorrado; window.doBorrar = doBorrar;
+
+applyBrand();
+resetState("completo");
+renderHome();
+</script>
+</body>
+</html>
