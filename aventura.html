@@ -15,7 +15,7 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   html, body { margin: 0; height: 100%; }
   body {
-    background: linear-gradient(165deg, #22282B 0%, #171C1E 100%);
+    background: linear-gradient(165deg, #22282B 0%, #14181A 100%);
     font-family: "Segoe UI", -apple-system, Roboto, sans-serif;
     color: var(--ink);
     display: flex; align-items: center; justify-content: center;
@@ -23,7 +23,7 @@
   }
   #stage {
     position: relative; width: min(100vw, 178vh); aspect-ratio: 16/9;
-    max-width: 1100px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    max-width: 1180px; box-shadow: 0 30px 80px rgba(0,0,0,0.65);
     border-radius: 12px; overflow: hidden;
   }
   canvas { display: block; width: 100%; height: 100%; background: #DDE6E2; }
@@ -38,9 +38,9 @@
   #hud {
     position: absolute; top: 10px; left: 10px; right: 10px;
     display: flex; align-items: center; gap: 10px; z-index: 10;
-    background: rgba(255,255,255,0.88); backdrop-filter: blur(6px);
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(6px);
     border-radius: 12px; padding: 7px 12px; font-size: 14px; font-weight: 700;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
   }
   #hud .pts { color: var(--green); font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   #hud .bienwrap { flex: 1; }
@@ -52,36 +52,59 @@
   @keyframes pulse { 50% { opacity: 0.5; } }
   #hud button { background: none; border: none; font-size: 18px; cursor: pointer; padding: 2px; }
 
+  /* Objetivo actual */
+  #objetivo {
+    position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
+    z-index: 9; max-width: 92%;
+    background: rgba(31,38,42,0.85); color: #fff;
+    border-radius: 999px; padding: 7px 18px;
+    font-size: 13.5px; font-weight: 700; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  }
+  #objetivo .chip { color: #FFD54F; margin-right: 6px; }
+
   /* Toast PREVI */
   #toast {
-    position: absolute; top: 58px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 96px; left: 50%; transform: translateX(-50%);
     max-width: 88%; z-index: 10; display: none;
     background: linear-gradient(180deg, #FFFFFF, var(--blue-soft));
     border: 1px solid rgba(10,92,168,0.25); border-radius: 14px;
     padding: 9px 16px; font-size: 14.5px; font-weight: 600;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
     animation: toastIn 0.3s ease both;
   }
   #toast strong { color: var(--blue); }
-  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%,-8px); } to { opacity: 1; transform: translate(-50%,0); } }
+
+  /* Botón de interacción grande (aparece cuando estás cerca) */
+  #accionUI {
+    position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%);
+    z-index: 11; display: none; border: none; cursor: pointer; font-family: inherit;
+    background: linear-gradient(180deg, var(--green-hi), var(--green));
+    color: #fff; font-weight: 800; font-size: 17px; padding: 13px 26px;
+    border-radius: 999px; box-shadow: 0 5px 0 var(--green-deep), 0 12px 28px rgba(0,0,0,0.4);
+    animation: bounceIn 0.35s cubic-bezier(0.2,1.5,0.4,1) both;
+  }
+  #accionUI:active { transform: translate(-50%, 4px); box-shadow: 0 0 0 var(--green-deep); }
+  @keyframes bounceIn { from { opacity: 0; transform: translate(-50%, 16px) scale(0.7); } to { opacity: 1; transform: translate(-50%,0) scale(1); } }
 
   /* Controles táctiles */
   #controles {
     position: absolute; bottom: 12px; left: 0; right: 0; z-index: 10;
-    display: flex; justify-content: space-between; padding: 0 16px;
+    display: flex; justify-content: space-between; padding: 0 14px;
     pointer-events: none;
   }
-  #controles .grupo { display: flex; gap: 12px; }
+  #controles .grupo { display: flex; gap: 14px; }
   .cbtn {
     pointer-events: auto; user-select: none;
-    width: 62px; height: 62px; border-radius: 50%;
-    border: none; font-size: 26px; font-weight: 800; cursor: pointer;
-    background: rgba(255,255,255,0.85); color: var(--ink);
-    box-shadow: 0 5px 0 rgba(0,0,0,0.25), 0 8px 18px rgba(0,0,0,0.3);
+    width: 72px; height: 72px; border-radius: 50%;
+    border: none; font-size: 30px; font-weight: 800; cursor: pointer;
+    background: rgba(255,255,255,0.88); color: var(--ink);
+    box-shadow: 0 5px 0 rgba(0,0,0,0.3), 0 10px 22px rgba(0,0,0,0.35);
     display: flex; align-items: center; justify-content: center;
   }
-  .cbtn:active, .cbtn.on { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.25); background: #fff; }
-  .cbtn.accion { background: linear-gradient(180deg, var(--green-hi), var(--green)); color: #fff; width: 72px; height: 72px; }
+  .cbtn:active, .cbtn.on { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.3); background: #fff; }
   @media (pointer: fine) and (min-width: 800px) { #controles { display: none; } }
 
   /* Overlays */
@@ -93,9 +116,9 @@
   #overlay.visible { display: flex; }
   .panel {
     background: #fff; border-radius: 20px; padding: 22px 24px;
-    max-width: 480px; width: 100%; max-height: 92%; overflow-y: auto;
+    max-width: 500px; width: 100%; max-height: 92%; overflow-y: auto;
     box-shadow: 0 24px 60px rgba(0,0,0,0.45);
-    animation: panelIn 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+    animation: panelIn 0.32s cubic-bezier(0.2,1.4,0.4,1) both;
   }
   @keyframes panelIn { from { opacity: 0; transform: scale(0.85) translateY(18px); } to { opacity: 1; transform: none; } }
   .panel.bad { border-top: 8px solid var(--red); }
@@ -141,6 +164,13 @@
     width: 100%; font-size: 17px; padding: 12px 14px; border-radius: 12px;
     border: 2px solid var(--line); font-family: inherit; margin: 6px 0 12px;
   }
+  .ctl-demo { display: flex; gap: 14px; justify-content: center; margin: 10px 0; }
+  .ctl-demo .k {
+    background: #fff; border: 2px solid var(--line); border-radius: 10px;
+    box-shadow: 0 3px 0 var(--line); padding: 8px 14px;
+    font-weight: 800; font-size: 15px; text-align: center;
+  }
+  .ctl-demo .k small { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); }
   .flash {
     position: absolute; inset: 0; pointer-events: none; z-index: 15;
     background: radial-gradient(ellipse at center, rgba(182,34,51,0) 35%, rgba(182,34,51,0.45) 100%);
@@ -166,14 +196,13 @@
     <button id="muteBtn" aria-label="Silenciar">🔊</button>
     <button onclick="location.href='index.html'" aria-label="Salir">🏠</button>
   </div>
+  <div id="objetivo"><span class="chip">🎯</span><span id="objTxt">…</span></div>
   <div id="toast"></div>
+  <button id="accionUI">⚡ Interactuar</button>
   <div id="controles">
     <div class="grupo">
       <button class="cbtn" id="btnIzq" aria-label="Izquierda">◀</button>
       <button class="cbtn" id="btnDer" aria-label="Derecha">▶</button>
-    </div>
-    <div class="grupo">
-      <button class="cbtn accion" id="btnAccion" aria-label="Interactuar">⚡</button>
     </div>
   </div>
   <div id="overlay"></div>
@@ -182,21 +211,22 @@
 <script>
 "use strict";
 /* =====================================================================
-   TURNO SEGURO — MODO AVENTURA (nivel 1: Mundo Operativo)
-   Side-scroller en canvas: mueve al personaje, enfréntate a los riesgos.
-   ← → / A D mover · E / espacio / ⚡ interactuar
+   TURNO SEGURO — MODO AVENTURA v2 (nivel 1: Mundo Operativo)
+   ← → / A D mover · E, espacio, tocar la pantalla o el botón verde:
+   interactuar. Objetivo siempre visible con flecha guía.
    ===================================================================== */
 
 const W = 960, H = 540, PISO = 448, MUNDO = 5700;
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 const stage = document.getElementById("stage"), overlay = document.getElementById("overlay");
+const accionUI = document.getElementById("accionUI");
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 cv.width = W * dpr; cv.height = H * dpr; ctx.scale(dpr, dpr);
 
 /* ---------- Estado ---------- */
 const S = {
   nombre: "", x: 120, dir: 1, andando: false, animT: 0,
-  epp: false, oidos: false,
+  epp: false, oidos: false, inv: 0,
   puntos: 0, bien: 100, errores: 0, errs: {}, reportes: 0,
   checkpoint: 120, pausado: true, fin: false, t: 0,
   flags: { apilado: false, contacto: false, protector: false, electrico: false,
@@ -226,6 +256,7 @@ const sndOk = () => tone([{f:523,d:0.12},{f:784,d:0.2}]);
 const sndBad = () => tone([{f:330,d:0.15},{f:196,d:0.3}]);
 const sndAlerta = () => tone([{f:880,d:0.1,w:"square"},{f:880,d:0.1,w:"square"}]);
 const sndPick = () => tone([{f:660,d:0.08},{f:880,d:0.1}]);
+const sndBeep = () => tone([{f:740,d:0.09,w:"square"}]);
 document.getElementById("muteBtn").onclick = function () {
   muted = !muted; this.textContent = muted ? "🔇" : "🔊";
 };
@@ -250,9 +281,11 @@ function bindBtn(id, key) {
 }
 bindBtn("btnIzq", "arrowleft");
 bindBtn("btnDer", "arrowright");
-document.getElementById("btnAccion").addEventListener("pointerdown", e => { e.preventDefault(); accionPulsada = true; });
+accionUI.addEventListener("pointerdown", e => { e.preventDefault(); accionPulsada = true; });
+/* tocar el escenario también interactúa (si hay algo cerca) */
+cv.addEventListener("pointerdown", () => { accionPulsada = true; });
 
-/* ---------- HUD / toast ---------- */
+/* ---------- HUD, objetivo y toast ---------- */
 function hud() {
   document.getElementById("hudPts").textContent = S.puntos + " pts";
   document.getElementById("hudBienLbl").textContent = "Bienestar " + Math.round(S.bien) + "%";
@@ -260,13 +293,24 @@ function hud() {
   bar.className = "bar" + (S.bien < 30 ? " low" : S.bien < 60 ? " warn" : "");
   bar.firstElementChild.style.width = clamp(S.bien, 0, 100) + "%";
 }
+function objetivoActual() {
+  if (!S.epp) return { x: 250, txt: "Arma tu EPP en el casillero" };
+  if (S.x < 1400) return { x: 1400, txt: "Cruza la bodega — no pases bajo la sombra roja" };
+  if (!S.flags.contacto && S.x < 2380) return { x: 1565, txt: "Activa el contacto visual y cruza el montacargas" };
+  if (S.x < 2400) return { x: 2420, txt: "Cruza la zona del montacargas" };
+  if (!S.oidos && S.x < 3260) return { x: 2470, txt: "Toma los protectores auditivos 🎧" };
+  if (S.x < 3320) return { x: 3340, txt: "Cruza la sala de compresores" };
+  if (!S.flags.electrico && S.x < 3800) return { x: 3660, txt: "Señaliza y reporta el cable eléctrico" };
+  if (!S.flags.alarma) return { x: 4360, txt: "Avanza hacia el final del turno →" };
+  return { x: 5490, txt: "🚨 ¡Evacúa! Ve al punto de encuentro" };
+}
 let toastTimer = null;
 function toast(msg, dur) {
   const t = document.getElementById("toast");
   t.innerHTML = "<strong>PREVI:</strong> " + msg;
   t.style.display = "block";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.style.display = "none"; }, dur || 4200);
+  toastTimer = setTimeout(() => { t.style.display = "none"; }, dur || 4500);
 }
 function avisoUnaVez(id, msg, dur) {
   if (S.flags.avisos[id]) return;
@@ -293,10 +337,10 @@ function flashRojo() {
   setTimeout(() => f.remove(), 850);
 }
 
-/* ---------- Lecciones (error → aprendizaje → reintento) ---------- */
+/* ---------- Lecciones ---------- */
 const LECCIONES = {
-  caida: { t: "Golpe por caída de objeto", exp: "Estabas bajo la zona de carga cuando cayó la caja. La sombra que parpadea es tu señal: nunca camines bajo carga suspendida.", regla: "Bajo carga suspendida, nunca te pares." },
-  monta: { t: "Casi-accidente con montacargas", exp: "El operador con carga tiene puntos ciegos enormes. Usa el botón de contacto visual en la entrada de la zona y cruza cuando esté detenido o lejos.", regla: "Cruce peatonal + mirada al operador." },
+  caida: { t: "Golpe por caída de objeto", exp: "Estabas bajo la zona de carga cuando cayó la caja. La sombra roja que parpadea es tu aviso: espera a que caiga y pasa después.", regla: "Bajo carga suspendida, nunca te pares." },
+  monta: { t: "Casi-accidente con montacargas", exp: "El operador con carga tiene puntos ciegos enormes. Usa el botón de contacto visual en la entrada de la zona: se detiene y te muestra un ✓ para cruzar.", regla: "Cruce peatonal + mirada al operador." },
   electrico: { t: "Descarga eléctrica evitada en la simulación", exp: "Nunca te acerques a un cable energizado. Señaliza, aléjate y repórtalo en el punto de reporte para que venga personal autorizado.", regla: "Cable suelto: señaliza, aléjate, reporta." }
 };
 function leccion(id) {
@@ -319,48 +363,57 @@ function leccion(id) {
 }
 function reintentar() {
   S.x = S.checkpoint;
+  S.inv = 2.2; /* invulnerable un momento para reubicarte con calma */
   cerrarPanel();
 }
 
-/* ---------- Mundo: entidades ---------- */
-/* Cajas que caen (bodega 700–1300) */
+/* ---------- Entidades ---------- */
 const cajas = [
   { x: 810, fase: 0 },
-  { x: 1010, fase: 1.4 },
-  { x: 1210, fase: 2.8 }
+  { x: 1010, fase: 1.7 },
+  { x: 1210, fase: 3.4 }
 ].map(c => ({ ...c, estado: "espera", t: c.fase, y: -80 }));
-const CICLO = { espera: 1.1, aviso: 0.95, cae: 0.42, suelo: 0.7 };
+const CICLO = { espera: 1.6, aviso: 1.4, cae: 0.5, suelo: 0.9 };
 
-/* Montacargas (1600–2320) */
-const monta = { x: 1650, dir: 1, vel: 150, pausa: 0 };
-
-/* Técnico eléctrico */
+const monta = { x: 1650, dir: 1, vel: 120, pausa: 0, beepT: 0 };
 const tecnico = { visible: false, x: 3980, llega: 0 };
 
-/* Interactuables */
 const INTER = [
-  { id: "locker", x: 250, label: "Casillero EPP", activo: () => !S.epp, usar: abrirKit },
-  { id: "apilado", x: 1370, label: "Reportar arrume", activo: () => S.epp && !S.flags.apilado, usar: () => {
+  { id: "locker", x: 250, label: "🧰 Abrir casillero de EPP", activo: () => !S.epp, usar: abrirKit },
+  { id: "apilado", x: 1370, label: "📣 Reportar arrume inestable", activo: () => S.epp && !S.flags.apilado, usar: () => {
       S.flags.apilado = true; S.reportes++; S.puntos += 20; sndOk(); hud();
       toast("¡Reporte enviado! Esa pila inestable ya no sorprenderá a nadie. <strong>+20</strong>");
     } },
-  { id: "contacto", x: 1565, label: "Contacto visual", activo: () => S.epp && !S.flags.contacto, usar: () => {
-      S.flags.contacto = true; monta.pausa = 5.5; S.puntos += 20; sndOk(); hud();
-      toast("El operador te vio y se detuvo. ¡Cruza ahora! <strong>+20</strong>");
+  { id: "contacto", x: 1565, label: "👀 Hacer contacto visual", activo: () => S.epp && !S.flags.contacto, usar: () => {
+      S.flags.contacto = true; monta.pausa = 6; S.puntos += 20; sndOk(); hud();
+      toast("El operador te vio y se detuvo (✓ verde). ¡Cruza ahora! <strong>+20</strong>");
     } },
-  { id: "protector", x: 2470, label: "Protección auditiva", activo: () => S.epp && !S.oidos, usar: () => {
+  { id: "protector", x: 2470, label: "🎧 Tomar protectores auditivos", activo: () => S.epp && !S.oidos, usar: () => {
       S.oidos = true; S.puntos += 10; sndPick(); hud();
-      if (!S.flags.protector) { S.flags.protector = true; }
-      toast("Protectores auditivos puestos. Ahora sí, a la zona de ruido. <strong>+10</strong>");
+      toast("Protectores puestos. Ahora sí, a la zona de ruido. <strong>+10</strong>");
     } },
-  { id: "electrico", x: 3660, label: "Señalizar y reportar", activo: () => S.epp && !S.flags.electrico, usar: () => {
+  { id: "electrico", x: 3660, label: "🚧 Señalizar y reportar", activo: () => S.epp && !S.flags.electrico, usar: () => {
       S.flags.electrico = true; S.reportes++; S.puntos += 20; sndOk(); hud();
       tecnico.visible = true; tecnico.llega = S.t + 1.4;
       toast("Zona señalizada y reporte enviado: viene el personal autorizado. <strong>+20</strong>");
     } }
 ];
+const RADIO_INTER = 95;
+function interCercano() {
+  let mejor = null, dist = RADIO_INTER;
+  INTER.forEach(it => {
+    if (!it.activo()) return;
+    const d = Math.abs(S.x - it.x);
+    if (d < dist) { dist = d; mejor = it; }
+  });
+  return mejor;
+}
+function accionar() {
+  const it = interCercano();
+  if (it) it.usar();
+}
 
-/* Mini-reto del kit EPP */
+/* ---------- Kit EPP ---------- */
 const KIT = [
   { n: "Casco", ico: "⛑️", ok: true }, { n: "Gafas", ico: "🥽", ok: true },
   { n: "Chaleco", ico: "🦺", ok: true }, { n: "Botas", ico: "🥾", ok: true },
@@ -409,24 +462,26 @@ function confKit() {
 }
 
 /* ---------- Actualización ---------- */
-let anteriorMundo = "";
 function update(dt) {
   S.t += dt;
+  if (S.inv > 0) S.inv -= dt;
 
-  /* movimiento */
   let vx = 0;
   if (keys["arrowleft"] || keys["a"]) vx -= 1;
   if (keys["arrowright"] || keys["d"]) vx += 1;
-  const enRuido = S.x > 2560 && S.x < 3260;
-  const vel = 230;
   S.andando = vx !== 0;
   if (vx !== 0) { S.dir = vx; S.animT += dt * 9; }
-  S.x = clamp(S.x + vx * vel * dt, 40, MUNDO - 60);
+  S.x = clamp(S.x + vx * 250 * dt, 40, MUNDO - 60);
 
-  /* barreras */
-  if (!S.epp && S.x > 415) { S.x = 415; avisoUnaVez("gate", "La barrera no abre sin tu EPP completo. Usa el casillero (⚡).", 4500); }
+  /* barrera EPP */
+  if (!S.epp && S.x > 415) { S.x = 415; avisoUnaVez("gate", "La barrera no abre sin tu EPP completo. Ve al casillero.", 4500); }
+  /* casillero se abre solo la primera vez que te acercas */
+  if (!S.epp && Math.abs(S.x - 250) < 70 && !S.flags.avisos.kitAuto && !overlay.classList.contains("visible")) {
+    S.flags.avisos.kitAuto = true;
+    abrirKit();
+  }
 
-  /* checkpoints por zona (monotónicos: nunca retroceden) */
+  /* checkpoints monotónicos */
   if (S.x > 620 && S.checkpoint < 640) S.checkpoint = 640;
   if (S.x > 1480 && S.checkpoint < 1500) S.checkpoint = 1500;
   if (S.x > 2400 && S.checkpoint < 2420) S.checkpoint = 2420;
@@ -434,12 +489,12 @@ function update(dt) {
   if (S.x > 4280 && S.checkpoint < 4300) S.checkpoint = 4300;
 
   /* avisos de zona */
-  if (S.x > 560 && S.x < 700) avisoUnaVez("bodega", "Zona de carga suspendida: si ves la <strong>sombra parpadeando</strong>, ¡no pases por ahí!");
-  if (S.x > 1440 && S.x < 1560) avisoUnaVez("monta", "Montacargas en circulación. Usa el punto de <strong>contacto visual</strong> (⚡) y cruza seguro.");
-  if (S.x > 2330 && S.x < 2470) avisoUnaVez("ruido", "Adelante hay 95 dB. Toma tus <strong>protectores auditivos</strong> (⚡) antes de entrar.");
-  if (S.x > 3330 && S.x < 3470) avisoUnaVez("electrico", "¡Cable energizado en el piso! No te acerques: usa el punto de <strong>reporte</strong> (⚡).");
+  if (S.x > 560 && S.x < 700) avisoUnaVez("bodega", "Zona de carga suspendida: la <strong>sombra roja parpadeando</strong> marca dónde va a caer. Espera y pasa.");
+  if (S.x > 1440 && S.x < 1560) avisoUnaVez("monta", "Montacargas en circulación. Activa el <strong>contacto visual</strong> y cruza cuando veas el ✓.");
+  if (S.x > 2330 && S.x < 2470) avisoUnaVez("ruido", "Adelante hay 95 dB. Toma tus <strong>protectores</strong> de la caja naranja antes de entrar.");
+  if (S.x > 3330 && S.x < 3470) avisoUnaVez("electrico", "¡Cable energizado! No te acerques: usa el punto de <strong>reporte</strong>.");
 
-  /* cajas que caen */
+  /* cajas */
   cajas.forEach(c => {
     c.t += dt;
     const dur = CICLO[c.estado];
@@ -450,7 +505,7 @@ function update(dt) {
     }
     if (c.estado === "cae") {
       c.y = -80 + (c.t / CICLO.cae) * (PISO - 40 + 80);
-      if (Math.abs(S.x - c.x) < 34 && c.y > PISO - 120) leccion("caida");
+      if (S.inv <= 0 && Math.abs(S.x - c.x) < 27 && c.y > PISO - 130) leccion("caida");
     }
   });
 
@@ -460,19 +515,22 @@ function update(dt) {
     monta.x += monta.dir * monta.vel * dt;
     if (monta.x > 2320) { monta.x = 2320; monta.dir = -1; }
     if (monta.x < 1640) { monta.x = 1640; monta.dir = 1; }
-    if (Math.abs(S.x - monta.x) < 70 && S.x > 1580 && S.x < 2380) leccion("monta");
+    /* pitido de reversa cuando está cerca */
+    if (Math.abs(S.x - monta.x) < 190 && S.t - monta.beepT > 0.8) { monta.beepT = S.t; sndBeep(); }
+    if (S.inv <= 0 && Math.abs(S.x - monta.x) < 58 && S.x > 1580 && S.x < 2380) leccion("monta");
   }
 
-  /* zona de ruido */
+  /* ruido */
+  const enRuido = S.x > 2560 && S.x < 3260;
   if (enRuido && !S.oidos) {
-    S.bien = clamp(S.bien - 4.5 * dt, 0, 100);
-    avisoUnaVez("ruidoDolor", "¡Ese ruido está dañando tu audición! Sal y toma los protectores (⚡ en la caja naranja).", 5000);
+    S.bien = clamp(S.bien - 3 * dt, 0, 100);
+    avisoUnaVez("ruidoDolor", "¡Ese ruido daña tu audición! Devuélvete por los protectores 🎧.", 5000);
   }
 
-  /* cable eléctrico */
-  if (!S.flags.electrico && Math.abs(S.x - 3850) < 55) leccion("electrico");
+  /* cable */
+  if (S.inv <= 0 && !S.flags.electrico && Math.abs(S.x - 3850) < 48) leccion("electrico");
 
-  /* premios por zona limpia */
+  /* premios de zona limpia */
   if (S.x > 1400 && !S.flags.avisos.pBodega) {
     S.flags.avisos.pBodega = true;
     if (S.limpio.bodega) { S.puntos += 15; sndOk(); toast("Cruzaste la bodega sin un solo golpe. <strong>+15</strong>"); }
@@ -489,18 +547,28 @@ function update(dt) {
   /* evacuación */
   if (S.x > 4350 && !S.flags.alarma) {
     S.flags.alarma = true; S.flags.evacT0 = S.t;
-    toast("🚨 ¡Alarma de evacuación! Sigue las flechas verdes hasta el <strong>punto de encuentro</strong>. Camina firme, sin correr.", 5000);
+    toast("🚨 ¡Alarma de evacuación! Sigue las flechas verdes hasta el <strong>punto de encuentro</strong>. Paso firme, sin correr.", 5000);
     sndAlerta();
   }
   if (S.flags.alarma && !S.fin && Math.floor(S.t * 1.2) !== Math.floor((S.t - dt) * 1.2)) sndAlerta();
   if (S.flags.alarma && S.x > 5480 && !S.fin) terminar();
 
+  /* botón grande de interacción */
+  const it = interCercano();
+  if (it && !S.pausado) {
+    accionUI.textContent = "⚡ " + it.label;
+    accionUI.style.display = "block";
+  } else {
+    accionUI.style.display = "none";
+  }
+  document.getElementById("objTxt").textContent = objetivoActual().txt;
   hud();
 }
 
 /* ---------- Final ---------- */
 function terminar() {
   S.fin = true; S.pausado = true;
+  accionUI.style.display = "none";
   const evacT = S.t - S.flags.evacT0;
   S.puntos += 25;
   if (evacT < 30) { S.puntos += 10; S.flags.evacBonus = true; }
@@ -554,40 +622,89 @@ function rr(x, y, w, h, r) {
   ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
+/* polvo ambiental */
+const polvo = [];
+for (let i = 0; i < 34; i++) polvo.push({ x: Math.random() * MUNDO, y: 60 + Math.random() * 330, f: 0.5 + Math.random() * 1.5 });
+
+const TITULOS = [
+  { x: 130, t: "VESTIER" }, { x: 960, t: "BODEGA" }, { x: 1930, t: "MONTACARGAS" },
+  { x: 2860, t: "ZONA DE RUIDO" }, { x: 3760, t: "TABLERO ELÉCTRICO" }, { x: 4900, t: "RUTA DE EVACUACIÓN" }
+];
+
 function draw() {
   const cam = clamp(S.x - W * 0.42, 0, MUNDO - W);
 
   /* pared con gradiente */
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#EDF2EE"); g.addColorStop(0.75, "#D8E0DA"); g.addColorStop(1, "#C9D2CB");
+  g.addColorStop(0, "#B9C6C0"); g.addColorStop(0.16, "#E9EFEA"); g.addColorStop(0.75, "#D5DED7"); g.addColorStop(1, "#C6D0C8");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-  /* parallax lejano: ventanas y cerchas */
+  /* parallax lejano: ventanas, cerchas y tubería */
   ctx.save(); ctx.translate(-cam * 0.35, 0);
-  ctx.fillStyle = "rgba(163,190,205,0.5)";
-  for (let x = 60; x < MUNDO * 0.5 + W; x += 300) { rr(x, 60, 160, 90, 8); ctx.fill(); }
-  ctx.strokeStyle = "rgba(120,140,150,0.35)"; ctx.lineWidth = 6;
-  for (let x = -100; x < MUNDO * 0.5 + W; x += 220) {
-    ctx.beginPath(); ctx.moveTo(x, 34); ctx.lineTo(x + 110, 6); ctx.lineTo(x + 220, 34); ctx.stroke();
+  for (let x = 60; x < MUNDO * 0.5 + W; x += 300) {
+    const vg = ctx.createLinearGradient(0, 66, 0, 150);
+    vg.addColorStop(0, "rgba(200,225,240,0.85)"); vg.addColorStop(1, "rgba(150,185,205,0.5)");
+    ctx.fillStyle = vg; rr(x, 66, 160, 84, 8); ctx.fill();
+    ctx.strokeStyle = "rgba(110,130,140,0.4)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x + 80, 66); ctx.lineTo(x + 80, 150); ctx.moveTo(x, 108); ctx.lineTo(x + 160, 108); ctx.stroke();
   }
+  ctx.strokeStyle = "rgba(120,140,150,0.4)"; ctx.lineWidth = 6;
+  for (let x = -100; x < MUNDO * 0.5 + W; x += 220) {
+    ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x + 110, 10); ctx.lineTo(x + 220, 40); ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(96,125,139,0.5)"; ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.moveTo(-100, 178); ctx.lineTo(MUNDO * 0.5 + W, 178); ctx.stroke();
+  ctx.fillStyle = "rgba(96,125,139,0.5)";
+  for (let x = 40; x < MUNDO * 0.5 + W; x += 260) ctx.fillRect(x, 172, 14, 12);
   ctx.restore();
 
-  /* parallax medio: siluetas de máquinas */
+  /* parallax medio: máquinas y estibas */
   ctx.save(); ctx.translate(-cam * 0.65, 0);
-  ctx.fillStyle = "rgba(96,115,110,0.28)";
-  for (let x = 40; x < MUNDO * 0.75 + W; x += 420) {
-    ctx.fillRect(x, 250, 140, 200); ctx.fillRect(x + 40, 210, 60, 40);
-    ctx.fillRect(x + 220, 300, 100, 150);
+  for (let x = 40; x < MUNDO * 0.75 + W; x += 460) {
+    ctx.fillStyle = "rgba(90,110,105,0.30)";
+    ctx.fillRect(x, 260, 150, 190); ctx.fillRect(x + 46, 218, 58, 44);
+    ctx.fillRect(x + 240, 310, 110, 140);
+    ctx.fillStyle = "rgba(90,110,105,0.22)";
+    ctx.fillRect(x + 250, 292, 90, 14); ctx.fillRect(x + 258, 274, 74, 14);
   }
   ctx.restore();
 
   /* mundo */
   ctx.save(); ctx.translate(-cam, 0);
 
-  /* piso */
-  ctx.fillStyle = "#B9C2BC"; ctx.fillRect(cam - 20, PISO, W + 40, H - PISO);
-  ctx.strokeStyle = "rgba(31,38,42,0.18)"; ctx.lineWidth = 3;
+  /* lámparas colgantes con cono de luz */
+  for (let x = 200; x < MUNDO; x += 420) {
+    ctx.strokeStyle = "rgba(70,90,100,0.55)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 44); ctx.stroke();
+    ctx.fillStyle = "#546E7A"; rr(x - 26, 44, 52, 14, 6); ctx.fill();
+    ctx.fillStyle = "#FFF6D8"; rr(x - 18, 52, 36, 7, 3); ctx.fill();
+    const lg = ctx.createLinearGradient(0, 58, 0, PISO);
+    lg.addColorStop(0, "rgba(255,244,200,0.30)"); lg.addColorStop(1, "rgba(255,244,200,0)");
+    ctx.fillStyle = lg;
+    ctx.beginPath(); ctx.moveTo(x - 20, 58); ctx.lineTo(x + 20, 58);
+    ctx.lineTo(x + 120, PISO); ctx.lineTo(x - 120, PISO); ctx.closePath(); ctx.fill();
+  }
+
+  /* títulos de zona pintados en la pared */
+  ctx.textAlign = "center"; ctx.font = "900 34px Segoe UI";
+  TITULOS.forEach(z => {
+    ctx.fillStyle = "rgba(31,38,42,0.14)";
+    ctx.fillText(z.t, z.x, 236);
+  });
+
+  /* piso con baldosas */
+  ctx.fillStyle = "#B4BEB7"; ctx.fillRect(cam - 20, PISO, W + 40, H - PISO);
+  ctx.strokeStyle = "rgba(31,38,42,0.10)"; ctx.lineWidth = 2;
+  for (let x = Math.floor(cam / 80) * 80; x < cam + W + 80; x += 80) {
+    ctx.beginPath(); ctx.moveTo(x, PISO); ctx.lineTo(x - 26, H); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(cam - 20, PISO + 34); ctx.lineTo(cam + W + 20, PISO + 34); ctx.stroke();
+  ctx.strokeStyle = "rgba(31,38,42,0.25)"; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(cam - 20, PISO); ctx.lineTo(cam + W + 20, PISO); ctx.stroke();
+
+  /* franja amarilla de seguridad a lo largo */
+  ctx.fillStyle = "rgba(242,183,5,0.5)";
+  ctx.fillRect(cam - 20, PISO + 2, W + 40, 5);
 
   dibujarVestier();
   dibujarBodega();
@@ -596,67 +713,109 @@ function draw() {
   dibujarElectrico();
   dibujarEvacuacion();
 
-  /* interactuables: prompt ⚡ */
+  /* polvo ambiental */
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  polvo.forEach(p => {
+    const px = p.x + Math.sin(S.t * 0.4 * p.f + p.y) * 22;
+    const py = p.y + Math.sin(S.t * 0.55 * p.f) * 14;
+    if (px > cam - 10 && px < cam + W + 10) { ctx.beginPath(); ctx.arc(px, py, 1.6, 0, 7); ctx.fill(); }
+  });
+
+  /* prompts de interacción */
   INTER.forEach(it => {
     if (!it.activo()) return;
-    const cerca = Math.abs(S.x - it.x) < 62;
-    ctx.font = "700 13px Segoe UI";
-    ctx.textAlign = "center";
+    const cerca = Math.abs(S.x - it.x) < RADIO_INTER;
+    const bob = Math.sin(S.t * 5) * 5;
     if (cerca) {
-      const bob = Math.sin(S.t * 5) * 4;
-      ctx.fillStyle = "#00795C";
-      ctx.beginPath(); ctx.arc(it.x, 300 + bob, 16, 0, 7); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.font = "800 16px Segoe UI";
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      rr(it.x - 17, 282 + bob, 34, 34, 17); ctx.fill();
+      ctx.strokeStyle = "#00795C"; ctx.lineWidth = 3;
+      rr(it.x - 17, 282 + bob, 34, 34, 17); ctx.stroke();
+      ctx.fillStyle = "#00795C"; ctx.font = "800 19px Segoe UI"; ctx.textAlign = "center";
       ctx.fillText("⚡", it.x, 306 + bob);
-      ctx.fillStyle = "#1F262A"; ctx.font = "700 13px Segoe UI";
-      ctx.fillText(it.label, it.x, 340 + bob);
     } else {
-      ctx.fillStyle = "rgba(0,121,92,0.7)";
-      ctx.beginPath(); ctx.arc(it.x, 306, 10, 0, 7); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.font = "800 11px Segoe UI"; ctx.fillText("⚡", it.x, 310);
+      ctx.fillStyle = "rgba(0,121,92,0.75)";
+      ctx.beginPath(); ctx.arc(it.x, 300, 11, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.font = "800 12px Segoe UI"; ctx.textAlign = "center";
+      ctx.fillText("⚡", it.x, 304);
     }
   });
 
+  /* flecha guía hacia el objetivo */
+  const obj = objetivoActual();
+  if (Math.abs(obj.x - S.x) > 130) {
+    const objEnPantalla = obj.x > cam + 30 && obj.x < cam + W - 30;
+    ctx.fillStyle = "#F2B705"; ctx.strokeStyle = "#8A6200"; ctx.lineWidth = 2;
+    if (objEnPantalla) {
+      const bob = Math.sin(S.t * 4) * 6;
+      ctx.beginPath();
+      ctx.moveTo(obj.x - 12, 250 + bob); ctx.lineTo(obj.x + 12, 250 + bob); ctx.lineTo(obj.x, 268 + bob);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  /* flecha de borde si el objetivo está fuera de pantalla */
+  if (obj.x > cam + W - 30) {
+    const bob = Math.sin(S.t * 4) * 4;
+    ctx.fillStyle = "rgba(242,183,5,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(W - 46 + bob, 236); ctx.lineTo(W - 16 + bob, 258); ctx.lineTo(W - 46 + bob, 280);
+    ctx.closePath(); ctx.fill();
+  } else if (obj.x < cam + 30) {
+    const bob = Math.sin(S.t * 4) * 4;
+    ctx.fillStyle = "rgba(242,183,5,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(46 - bob, 236); ctx.lineTo(16 - bob, 258); ctx.lineTo(46 - bob, 280);
+    ctx.closePath(); ctx.fill();
+  }
+
+  ctx.save(); ctx.translate(-cam, 0);
   dibujarPrevi();
   dibujarJugador();
   ctx.restore();
 
-  /* efecto de ruido sin protección */
+  /* borde rojo si estás en ruido sin protección */
   if (S.x > 2560 && S.x < 3260 && !S.oidos) {
-    ctx.strokeStyle = "rgba(182,34,51," + (0.25 + Math.sin(S.t * 14) * 0.15) + ")";
-    ctx.lineWidth = 16; ctx.strokeRect(4, 4, W - 8, H - 8);
+    ctx.strokeStyle = "rgba(182,34,51," + (0.28 + Math.sin(S.t * 14) * 0.16) + ")";
+    ctx.lineWidth = 18; ctx.strokeRect(4, 4, W - 8, H - 8);
   }
+
+  /* viñeta sutil */
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.95);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(20,26,24,0.28)");
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 }
 
 function dibujarVestier() {
-  /* casillero */
   ctx.fillStyle = "#78909C"; rr(210, 250, 84, 198, 6); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(210, 250, 84, 10);
   ctx.strokeStyle = "#546E7A"; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(252, 250); ctx.lineTo(252, 448); ctx.stroke();
   ctx.fillStyle = "#546E7A";
   [278, 292].forEach(y => { ctx.fillRect(220, y, 22, 5); ctx.fillRect(262, y, 22, 5); });
   ctx.font = "22px Segoe UI"; ctx.textAlign = "center";
   ctx.fillText("⛑️", 231, 240); ctx.fillText("🦺", 273, 240);
-  /* señal EPP */
   ctx.fillStyle = "#0A5CA8"; rr(330, 200, 120, 34, 6); ctx.fill();
   ctx.fillStyle = "#fff"; ctx.font = "800 13px Segoe UI";
   ctx.fillText("EPP OBLIGATORIO", 390, 222);
-  /* barrera */
   const abierta = S.epp;
   ctx.fillStyle = "#455A64"; ctx.fillRect(430, 330, 12, 118);
   ctx.save(); ctx.translate(436, 340); ctx.rotate(abierta ? -1.35 : 0);
   const gb = ctx.createLinearGradient(0, 0, 130, 0);
-  for (let i = 0; i < 6; i++) { gb.addColorStop(i / 6, i % 2 ? "#23272B" : "#F2B705"); }
+  for (let i = 0; i < 6; i++) gb.addColorStop(i / 6, i % 2 ? "#23272B" : "#F2B705");
   ctx.fillStyle = gb; ctx.fillRect(0, -7, 130, 14);
   ctx.restore();
 }
 
 function dibujarBodega() {
-  /* estantería con arrume inestable */
   ctx.fillStyle = "#616161"; ctx.fillRect(660, 130, 10, 318); ctx.fillRect(1330, 130, 10, 318);
   ctx.fillStyle = "#757575"; ctx.fillRect(660, 150, 680, 10);
-  ctx.fillStyle = "#8D6E4E";
-  [730, 900, 1090, 1250].forEach(x => { ctx.fillStyle = "#BC8F5E"; ctx.fillRect(x, 96, 54, 52); ctx.strokeStyle = "#8D6E4E"; ctx.strokeRect(x, 96, 54, 52); });
+  [730, 900, 1090, 1250].forEach(x => {
+    ctx.fillStyle = "#BC8F5E"; ctx.fillRect(x, 96, 54, 52);
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(x, 96, 54, 8);
+    ctx.strokeStyle = "#8D6E4E"; ctx.strokeRect(x, 96, 54, 52);
+  });
   if (!S.flags.apilado) {
     ctx.save(); ctx.translate(1385, 108); ctx.rotate(0.28);
     ctx.fillStyle = "#BC8F5E"; ctx.fillRect(-26, -24, 52, 48); ctx.strokeStyle = "#8D6E4E"; ctx.strokeRect(-26, -24, 52, 48);
@@ -664,61 +823,53 @@ function dibujarBodega() {
     ctx.fillStyle = "#B62233"; ctx.font = "900 22px Segoe UI"; ctx.textAlign = "center";
     if (Math.sin(S.t * 6) > 0) ctx.fillText("!", 1385, 70);
   }
-  /* sendero */
   ctx.fillStyle = "rgba(242,183,5,0.4)"; ctx.fillRect(680, PISO + 26, 660, 26);
-  /* cajas cayendo */
   cajas.forEach(c => {
     if (c.estado === "aviso") {
-      if (Math.sin(S.t * 16) > 0) {
-        ctx.fillStyle = "rgba(182,34,51,0.4)";
-        ctx.beginPath(); ctx.ellipse(c.x, PISO - 2, 36, 8, 0, 0, 7); ctx.fill();
+      if (Math.sin(S.t * 12) > -0.3) {
+        ctx.fillStyle = "rgba(182,34,51,0.42)";
+        ctx.beginPath(); ctx.ellipse(c.x, PISO - 2, 40, 9, 0, 0, 7); ctx.fill();
       }
-      ctx.fillStyle = "#B62233"; ctx.font = "900 20px Segoe UI"; ctx.textAlign = "center";
-      ctx.fillText("⚠", c.x, PISO - 60);
+      ctx.fillStyle = "#B62233"; ctx.font = "900 22px Segoe UI"; ctx.textAlign = "center";
+      ctx.fillText("⚠", c.x, PISO - 64);
     }
-    if (c.estado === "cae") {
+    if (c.estado === "cae" || c.estado === "suelo") {
+      const y = c.estado === "cae" ? c.y : PISO - 44;
       ctx.fillStyle = "#BC8F5E"; ctx.strokeStyle = "#8D6E4E"; ctx.lineWidth = 2;
-      ctx.fillRect(c.x - 24, c.y, 48, 44); ctx.strokeRect(c.x - 24, c.y, 48, 44);
-      ctx.strokeStyle = "rgba(141,110,78,0.5)";
-      ctx.beginPath(); ctx.moveTo(c.x - 10, c.y - 18); ctx.lineTo(c.x - 10, c.y - 4); ctx.stroke();
-    }
-    if (c.estado === "suelo") {
-      ctx.fillStyle = "#BC8F5E"; ctx.strokeStyle = "#8D6E4E"; ctx.lineWidth = 2;
-      ctx.fillRect(c.x - 24, PISO - 44, 48, 44); ctx.strokeRect(c.x - 24, PISO - 44, 48, 44);
+      ctx.fillRect(c.x - 24, y, 48, 44); ctx.strokeRect(c.x - 24, y, 48, 44);
+      ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(c.x - 24, y, 48, 7);
     }
   });
 }
 
 function dibujarMontacargas() {
-  /* cruce peatonal */
   ctx.fillStyle = "rgba(255,255,255,0.85)";
-  for (let i = 0; i < 5; i++) ctx.fillRect(2340 + i * 4, PISO + 14 + i * 9, 90, 5);
+  for (let i = 0; i < 5; i++) ctx.fillRect(2340 + i * 4, PISO + 12 + i * 8, 90, 5);
   const m = monta;
+  /* sombra */
+  ctx.fillStyle = "rgba(31,38,42,0.2)";
+  ctx.beginPath(); ctx.ellipse(m.x + 10, PISO - 4, 62, 8, 0, 0, 7); ctx.fill();
   ctx.save(); ctx.translate(m.x, PISO - 66);
-  if (m.dir < 0) { ctx.scale(-1, 1); }
-  /* cuerpo */
+  if (m.dir < 0) ctx.scale(-1, 1);
   ctx.fillStyle = "#F57F17"; rr(-46, 12, 86, 40, 7); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.2)"; rr(-46, 12, 86, 10, 5); ctx.fill();
   ctx.fillStyle = "#455A64"; ctx.fillRect(-38, -28, 7, 42); ctx.fillRect(16, -28, 7, 42); ctx.fillRect(-42, -32, 70, 6);
-  /* mástil y carga */
   ctx.fillStyle = "#37474F"; ctx.fillRect(46, -20, 6, 78);
   ctx.fillRect(52, 40, 30, 5); ctx.fillRect(52, 52, 30, 5);
   ctx.fillStyle = "#BC8F5E"; ctx.fillRect(54, 8, 30, 32); ctx.strokeStyle = "#8D6E4E"; ctx.strokeRect(54, 8, 30, 32);
-  /* ruedas */
   ctx.fillStyle = "#212121";
   ctx.beginPath(); ctx.arc(-26, 56, 13, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.arc(22, 56, 13, 0, 7); ctx.fill();
   ctx.fillStyle = "#78909C";
   ctx.beginPath(); ctx.arc(-26, 56, 5, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.arc(22, 56, 5, 0, 7); ctx.fill();
-  /* operador */
   ctx.fillStyle = "#D9A066"; ctx.beginPath(); ctx.arc(-8, -6, 9, 0, 7); ctx.fill();
   ctx.fillStyle = "#F2B705"; ctx.beginPath(); ctx.arc(-8, -9, 9, Math.PI, 0); ctx.fill();
   if (m.pausa > 0) {
-    ctx.fillStyle = "#00795C"; ctx.font = "900 22px Segoe UI"; ctx.textAlign = "center";
-    ctx.fillText("✓", -8, -30);
+    ctx.fillStyle = "#00795C"; ctx.font = "900 26px Segoe UI"; ctx.textAlign = "center";
+    ctx.fillText("✓", -8, -34);
   }
   ctx.restore();
-  /* luz de aviso si se mueve */
   if (m.pausa <= 0 && Math.sin(S.t * 10) > 0) {
     ctx.fillStyle = "#F57F17";
     ctx.beginPath(); ctx.arc(m.x - (m.dir > 0 ? 42 : -42), PISO - 100, 5, 0, 7); ctx.fill();
@@ -726,42 +877,38 @@ function dibujarMontacargas() {
 }
 
 function dibujarRuido() {
-  /* compresores */
   [2620, 2860, 3100].forEach(x => {
     ctx.fillStyle = "#78909C"; rr(x, 300, 120, 148, 8); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(x + 4, 302, 112, 10);
     ctx.fillStyle = "#546E7A"; ctx.beginPath(); ctx.arc(x + 40, 360, 24, 0, 7); ctx.fill();
     ctx.strokeStyle = "#B0BEC5"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(x + 40, 340); ctx.lineTo(x + 40, 380); ctx.moveTo(x + 20, 360); ctx.lineTo(x + 60, 360); ctx.stroke();
-    /* ondas */
+    ctx.save(); ctx.translate(x + 40, 360); ctx.rotate(S.t * 3);
+    ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(0, 20); ctx.moveTo(-20, 0); ctx.lineTo(20, 0); ctx.stroke();
+    ctx.restore();
     const k = 0.4 + 0.6 * Math.abs(Math.sin(S.t * 3 + x));
     ctx.strokeStyle = "rgba(245,127,23," + k + ")"; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(x + 95, 330, 18, -0.9, 0.9); ctx.stroke();
     ctx.beginPath(); ctx.arc(x + 95, 330, 30, -0.8, 0.8); ctx.stroke();
   });
-  /* señal 95 dB */
   ctx.fillStyle = "#F2B705"; rr(2500, 190, 96, 34, 6); ctx.fill();
   ctx.strokeStyle = "#23272B"; ctx.lineWidth = 2; rr(2500, 190, 96, 34, 6); ctx.stroke();
   ctx.fillStyle = "#1F262A"; ctx.font = "800 15px Segoe UI"; ctx.textAlign = "center";
   ctx.fillText("95 dB 🎧", 2548, 213);
-  /* caja de protectores */
   ctx.fillStyle = "#F57F17"; rr(2450, 380, 44, 68, 6); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.fillRect(2450, 380, 44, 9);
   ctx.fillStyle = "#fff"; ctx.font = "20px Segoe UI"; ctx.fillText("🎧", 2472, 420);
 }
 
 function dibujarElectrico() {
-  /* tablero */
   ctx.fillStyle = "#78909C"; rr(3560, 220, 80, 120, 6); ctx.fill();
   ctx.fillStyle = "#455A64"; ctx.fillRect(3572, 234, 56, 30);
   ["#B62233", "#F2B705", "#00795C"].forEach((c, i) => {
     ctx.fillStyle = c; ctx.beginPath(); ctx.arc(3584 + i * 18, 288, 5, 0, 7); ctx.fill();
   });
-  /* cable al piso */
   ctx.strokeStyle = "#B62233"; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(3640, 340); ctx.quadraticCurveTo(3760, 420, 3850, PISO - 4); ctx.stroke();
   if (!S.flags.electrico) {
-    /* chispas */
-    const k = Math.sin(S.t * 18);
-    if (k > 0) {
+    if (Math.sin(S.t * 18) > 0) {
       ctx.strokeStyle = "#F2B705"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(3850, PISO - 8); ctx.lineTo(3840, PISO - 26); ctx.lineTo(3852, PISO - 22); ctx.lineTo(3844, PISO - 42); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(3856, PISO - 6); ctx.lineTo(3868, PISO - 22); ctx.stroke();
@@ -769,11 +916,9 @@ function dibujarElectrico() {
     ctx.fillStyle = "#B62233"; ctx.font = "900 22px Segoe UI"; ctx.textAlign = "center";
     if (Math.sin(S.t * 6) > 0) ctx.fillText("⚡", 3850, PISO - 60);
   } else {
-    /* cono */
     ctx.fillStyle = "#F57F17";
     ctx.beginPath(); ctx.moveTo(3790, PISO); ctx.lineTo(3806, PISO - 40); ctx.lineTo(3822, PISO); ctx.closePath(); ctx.fill();
     ctx.fillStyle = "#fff"; ctx.fillRect(3796, PISO - 22, 20, 7);
-    /* técnico */
     if (tecnico.visible && S.t > tecnico.llega) {
       ctx.fillStyle = "#D9A066"; ctx.beginPath(); ctx.arc(3950, PISO - 88, 12, 0, 7); ctx.fill();
       ctx.fillStyle = "#0A5CA8"; rr(3936, PISO - 76, 28, 44, 6); ctx.fill();
@@ -783,7 +928,6 @@ function dibujarElectrico() {
       ctx.fillText("✓", 3950, PISO - 108);
     }
   }
-  /* señal riesgo eléctrico */
   ctx.fillStyle = "#F2B705";
   ctx.beginPath(); ctx.moveTo(3700, 200); ctx.lineTo(3722, 238); ctx.lineTo(3678, 238); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#23272B"; ctx.lineWidth = 2; ctx.stroke();
@@ -793,7 +937,6 @@ function dibujarElectrico() {
 
 function dibujarEvacuacion() {
   if (S.flags.alarma) {
-    /* alarma */
     const k = Math.sin(S.t * 8) > 0;
     ctx.fillStyle = k ? "#B62233" : "#7E1424";
     ctx.beginPath(); ctx.arc(4420, 150, 14, 0, 7); ctx.fill();
@@ -801,50 +944,51 @@ function dibujarEvacuacion() {
       ctx.strokeStyle = "rgba(182,34,51,0.5)"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(4420, 150, 26, 0, 7); ctx.stroke();
     }
-    /* flechas de ruta */
     ctx.fillStyle = "#00795C"; ctx.font = "900 30px Segoe UI"; ctx.textAlign = "center";
     for (let x = 4500; x < 5400; x += 220) {
       const bob = Math.sin(S.t * 4 + x) * 3;
-      ctx.fillText("→", x + bob, PISO + 40);
+      ctx.fillText("→", x + bob, PISO + 42);
     }
   }
-  /* señal salida + puerta */
   ctx.fillStyle = "#00795C"; rr(5360, 170, 130, 40, 6); ctx.fill();
   ctx.fillStyle = "#fff"; ctx.font = "800 17px Segoe UI"; ctx.textAlign = "center";
   ctx.fillText("SALIDA →", 5425, 197);
   ctx.fillStyle = "#8D6E63"; ctx.fillRect(5470, 240, 90, 208);
+  ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fillRect(5470, 240, 90, 12);
   ctx.strokeStyle = "#5D4037"; ctx.lineWidth = 4; ctx.strokeRect(5470, 240, 90, 208);
   ctx.fillStyle = "#37474F"; ctx.beginPath(); ctx.arc(5486, 348, 5, 0, 7); ctx.fill();
-  /* punto de encuentro */
   ctx.fillStyle = "#00795C"; rr(5560, 300, 110, 60, 8); ctx.fill();
   ctx.fillStyle = "#fff"; ctx.font = "800 12px Segoe UI";
   ctx.fillText("PUNTO DE", 5615, 325); ctx.fillText("ENCUENTRO", 5615, 342);
 }
 
 function dibujarPrevi() {
-  const px = S.x - S.dir * 55, py = 250 + Math.sin(S.t * 2.4) * 8;
-  /* hélice */
+  const px = S.x - S.dir * 58, py = 244 + Math.sin(S.t * 2.4) * 8;
   ctx.strokeStyle = "#607D8B"; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(px, py - 22); ctx.lineTo(px, py - 15); ctx.stroke();
   ctx.fillStyle = "#78909C";
   const hw = 12 * Math.abs(Math.sin(S.t * 12)) + 3;
   ctx.beginPath(); ctx.ellipse(px, py - 24, hw, 2.4, 0, 0, 7); ctx.fill();
-  /* casco flotante */
   ctx.fillStyle = "#F2B705"; ctx.strokeStyle = "#C99700"; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(px, py, 16, Math.PI, 0); ctx.fill(); ctx.stroke();
   rr(px - 20, py - 2, 40, 7, 3.5); ctx.fill(); ctx.stroke();
+  /* ojos que parpadean */
+  const parpadeo = Math.sin(S.t * 0.9) > 0.97;
   ctx.fillStyle = "#212121";
-  ctx.beginPath(); ctx.arc(px - 6, py - 6, 3, 0, 7); ctx.fill();
-  ctx.beginPath(); ctx.arc(px + 6, py - 6, 3, 0, 7); ctx.fill();
+  if (parpadeo) { ctx.fillRect(px - 9, py - 7, 6, 2); ctx.fillRect(px + 3, py - 7, 6, 2); }
+  else {
+    ctx.beginPath(); ctx.arc(px - 6, py - 6, 3, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 6, py - 6, 3, 0, 7); ctx.fill();
+  }
 }
 
 function dibujarJugador() {
   const x = S.x, y = PISO;
-  /* sombra */
-  ctx.fillStyle = "rgba(31,38,42,0.22)";
-  ctx.beginPath(); ctx.ellipse(x, y - 3, 24, 6, 0, 0, 7); ctx.fill();
-  ctx.save(); ctx.translate(x, y - 78);
-  if (S.dir < 0) ctx.scale(-1, 1);
+  if (S.inv > 0 && Math.sin(S.t * 18) > 0) return; /* parpadeo de invulnerabilidad */
+  ctx.fillStyle = "rgba(31,38,42,0.25)";
+  ctx.beginPath(); ctx.ellipse(x, y - 3, 27, 7, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(x, y - 92);
+  ctx.scale(S.dir < 0 ? -1.18 : 1.18, 1.18);
   const paso = S.andando ? Math.sin(S.animT) * 9 : 0;
   /* piernas */
   ctx.fillStyle = "#37474F";
@@ -853,51 +997,43 @@ function dibujarJugador() {
   ctx.fillStyle = "#212121";
   rr(-13 + paso * 0.5, 70, 14, 7, 3); ctx.fill();
   rr(0 - paso * 0.5, 70, 14, 7, 3); ctx.fill();
+  /* brazos (balancean al contrario de las piernas) */
+  ctx.fillStyle = "#0E4DA0";
+  rr(-22 - paso * 0.4, 12, 8, 26, 4); ctx.fill();
+  rr(14 + paso * 0.4, 12, 8, 26, 4); ctx.fill();
   /* torso */
   ctx.fillStyle = "#1565C0"; rr(-15, 10, 30, 40, 7); ctx.fill();
   if (S.epp) {
     ctx.fillStyle = "#F57F17"; rr(-15, 10, 30, 27, 7); ctx.fill();
     ctx.fillStyle = "#FFF59D"; ctx.fillRect(-15, 19, 30, 4);
   }
-  /* brazos */
-  ctx.fillStyle = "#1565C0";
-  rr(-22, 12, 8, 26, 4); ctx.fill();
-  rr(14, 12, 8, 26, 4); ctx.fill();
+  ctx.strokeStyle = "rgba(31,38,42,0.3)"; ctx.lineWidth = 1.5;
+  rr(-15, 10, 30, 40, 7); ctx.stroke();
   /* cabeza */
   ctx.fillStyle = "#D9A066"; ctx.beginPath(); ctx.arc(0, -2, 14, 0, 7); ctx.fill();
   ctx.fillStyle = "#212121";
   ctx.beginPath(); ctx.arc(4, -5, 1.8, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.arc(10, -5, 1.8, 0, 7); ctx.fill();
-  /* gafas si EPP */
-  if (S.epp) { ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(7, -5, 6, 0, 7); ctx.stroke(); }
-  /* protectores auditivos */
+  ctx.strokeStyle = "#212121"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(6, 2, 4, 0.2, Math.PI - 0.4); ctx.stroke();
+  if (S.epp) { ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(7, -5, 6, 0, 7); ctx.stroke(); }
   if (S.oidos) {
     ctx.fillStyle = "#F57F17";
     ctx.beginPath(); ctx.arc(-6, -4, 5, 0, 7); ctx.fill();
     ctx.strokeStyle = "#F57F17"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, -8, 11, Math.PI, 0); ctx.stroke();
   }
-  /* casco o cabello */
   if (S.epp) {
     ctx.fillStyle = "#F2B705"; ctx.strokeStyle = "#C99700"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, -8, 14, Math.PI, 0); ctx.fill(); ctx.stroke();
     ctx.fillRect(-16, -9, 32, 5);
+    ctx.strokeStyle = "#FFF176"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(-2, -11, 9, Math.PI * 1.15, Math.PI * 1.6); ctx.stroke();
   } else {
     ctx.fillStyle = "#4E342E";
     ctx.beginPath(); ctx.arc(0, -6, 13.5, Math.PI, 0); ctx.fill();
   }
   ctx.restore();
-}
-
-/* ---------- Acción (interactuar) ---------- */
-function accionar() {
-  let mejor = null, dist = 66;
-  INTER.forEach(it => {
-    if (!it.activo()) return;
-    const d = Math.abs(S.x - it.x);
-    if (d < dist) { dist = d; mejor = it; }
-  });
-  if (mejor) mejor.usar();
 }
 
 /* ---------- Bucle ---------- */
@@ -920,8 +1056,12 @@ function intro() {
   panel(
     '<div style="text-align:center;font-size:44px">👷</div>' +
     '<h2 style="text-align:center">Modo Aventura · Mundo Operativo</h2>' +
-    '<p style="font-size:14.5px;text-align:center;margin:4px 0 12px">Recorre la planta, esquiva los riesgos reales y llega al punto de encuentro. Los errores enseñan: la simulación te protege, la vida real no.</p>' +
-    '<div class="exp"><strong>Controles:</strong> ← → (o A/D) para moverte · <strong>E</strong>, espacio o el botón ⚡ para interactuar con casilleros, reportes y señales. En celular usa los botones en pantalla.</div>' +
+    '<p style="font-size:14.5px;text-align:center;margin:4px 0 10px">Recorre la planta, esquiva los riesgos y llega al punto de encuentro. El objetivo de turno siempre está arriba 🎯 y la flecha amarilla te guía.</p>' +
+    '<div class="ctl-demo">' +
+    '<div class="k">◀ ▶<small>moverte</small></div>' +
+    '<div class="k">⚡<small>botón verde: interactuar</small></div>' +
+    '<div class="k">E / espacio<small>también interactúa</small></div>' +
+    '</div>' +
     '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
     '<button class="btn" onclick="empezar()">▶ Iniciar el turno</button>' +
     '<button class="btn sec" onclick="location.href=\'index.html\'">Volver al menú</button>');
@@ -930,11 +1070,12 @@ function empezar() {
   const n = document.getElementById("nombre").value.trim();
   S.nombre = n || "Jugador(a)";
   cerrarPanel();
-  toast("¡Buen turno, " + escHtml(S.nombre) + "! Primero lo primero: tu EPP está en el casillero (acércate y pulsa ⚡).", 5200);
+  toast("¡Buen turno, " + escHtml(S.nombre) + "! Camina hacia el casillero → y arma tu EPP.", 5200);
 }
 
 window.togKit = togKit; window.confKit = confKit; window.empezar = empezar;
-window.reintentar = reintentar; window.AV = { S, monta, cajas, leccion, accionar, terminar, update, INTER };
+window.reintentar = reintentar;
+window.AV = { S, monta, cajas, leccion, accionar, terminar, update, INTER, objetivoActual };
 
 intro();
 requestAnimationFrame(loop);
