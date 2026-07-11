@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Turno Seguro — Modo Aventura</title>
+<style>
+  :root {
+    --ink: #1F262A; --muted: #5B6871; --line: #D5DCD3;
+    --green: #00795C; --green-hi: #009B76; --green-deep: #00503B; --green-soft: #DFF0E8;
+    --yellow: #F2B705; --yellow-ink: #8A6200;
+    --red: #B62233; --red-soft: #FADDE0;
+    --blue: #0A5CA8; --blue-soft: #E0EDF9;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: linear-gradient(165deg, #22282B 0%, #171C1E 100%);
+    font-family: "Segoe UI", -apple-system, Roboto, sans-serif;
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+  }
+  #stage {
+    position: relative; width: min(100vw, 178vh); aspect-ratio: 16/9;
+    max-width: 1100px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    border-radius: 12px; overflow: hidden;
+  }
+  canvas { display: block; width: 100%; height: 100%; background: #DDE6E2; }
+  #stage.frozen canvas { filter: grayscale(1) contrast(1.15); }
+  #stage.shake { animation: shake 0.5s both; }
+  @keyframes shake {
+    10%,90% { transform: translateX(-3px); } 20%,80% { transform: translateX(5px); }
+    30%,50%,70% { transform: translateX(-8px); } 40%,60% { transform: translateX(8px); }
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute; top: 10px; left: 10px; right: 10px;
+    display: flex; align-items: center; gap: 10px; z-index: 10;
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(6px);
+    border-radius: 12px; padding: 7px 12px; font-size: 14px; font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  }
+  #hud .pts { color: var(--green); font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #hud .bienwrap { flex: 1; }
+  #hud .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+  .bar { height: 11px; background: rgba(31,38,42,0.15); border-radius: 8px; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 8px; background: linear-gradient(180deg, var(--green-hi), var(--green)); transition: width 0.3s; }
+  .bar.warn > div { background: linear-gradient(180deg, #FFCB2E, var(--yellow)); }
+  .bar.low > div { background: linear-gradient(180deg, #D53A4C, var(--red)); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.5; } }
+  #hud button { background: none; border: none; font-size: 18px; cursor: pointer; padding: 2px; }
+
+  /* Toast PREVI */
+  #toast {
+    position: absolute; top: 58px; left: 50%; transform: translateX(-50%);
+    max-width: 88%; z-index: 10; display: none;
+    background: linear-gradient(180deg, #FFFFFF, var(--blue-soft));
+    border: 1px solid rgba(10,92,168,0.25); border-radius: 14px;
+    padding: 9px 16px; font-size: 14.5px; font-weight: 600;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    animation: toastIn 0.3s ease both;
+  }
+  #toast strong { color: var(--blue); }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+  /* Controles táctiles */
+  #controles {
+    position: absolute; bottom: 12px; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between; padding: 0 16px;
+    pointer-events: none;
+  }
+  #controles .grupo { display: flex; gap: 12px; }
+  .cbtn {
+    pointer-events: auto; user-select: none;
+    width: 62px; height: 62px; border-radius: 50%;
+    border: none; font-size: 26px; font-weight: 800; cursor: pointer;
+    background: rgba(255,255,255,0.85); color: var(--ink);
+    box-shadow: 0 5px 0 rgba(0,0,0,0.25), 0 8px 18px rgba(0,0,0,0.3);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cbtn:active, .cbtn.on { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.25); background: #fff; }
+  .cbtn.accion { background: linear-gradient(180deg, var(--green-hi), var(--green)); color: #fff; width: 72px; height: 72px; }
+  @media (pointer: fine) and (min-width: 800px) { #controles { display: none; } }
+
+  /* Overlays */
+  #overlay {
+    position: absolute; inset: 0; z-index: 20; display: none;
+    background: rgba(14,20,18,0.62); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  #overlay.visible { display: flex; }
+  .panel {
+    background: #fff; border-radius: 20px; padding: 22px 24px;
+    max-width: 480px; width: 100%; max-height: 92%; overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    animation: panelIn 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  @keyframes panelIn { from { opacity: 0; transform: scale(0.85) translateY(18px); } to { opacity: 1; transform: none; } }
+  .panel.bad { border-top: 8px solid var(--red); }
+  .panel.ok { border-top: 8px solid var(--green); }
+  .panel.info { border-top: 8px solid var(--blue); }
+  .panel h2 { margin: 0 0 8px; font-size: 22px; font-weight: 800; }
+  .panel h2.alerta { color: var(--red); }
+  .panel .exp {
+    background: var(--blue-soft); border-left: 4px solid var(--blue);
+    border-radius: 10px; padding: 10px 14px; font-size: 14.5px; margin: 12px 0;
+  }
+  .panel .exp strong { color: var(--blue); }
+  .panel .regla { font-size: 17px; font-weight: 800; text-align: center; padding: 8px; color: var(--yellow-ink); }
+  .btn {
+    display: block; width: 100%; border: none; cursor: pointer;
+    background: linear-gradient(180deg, var(--green-hi), var(--green));
+    color: #fff; font-weight: 800; font-size: 16.5px; padding: 13px 18px;
+    border-radius: 14px; font-family: inherit; margin: 9px 0;
+    box-shadow: 0 4px 0 var(--green-deep), 0 8px 18px rgba(0,0,0,0.2);
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--green-deep); }
+  .btn.sec { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); }
+  .kit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+  .kit-item {
+    border: 2px solid var(--line); background: #fff; border-radius: 12px;
+    padding: 8px 4px; text-align: center; cursor: pointer; font-family: inherit;
+    font-size: 11px; font-weight: 600; color: var(--ink); box-shadow: 0 3px 0 var(--line);
+  }
+  .kit-item .ico { font-size: 24px; display: block; }
+  .kit-item.sel { border-color: var(--green); background: var(--green-soft); box-shadow: 0 3px 0 var(--green); }
+  .kit-item.errado { border-color: var(--red); background: var(--red-soft); }
+  .medallas { display: flex; gap: 10px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+  .medalla { text-align: center; font-size: 12px; font-weight: 700; width: 100px; }
+  .medalla .ico { font-size: 34px; display: block; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.25)); }
+  .medalla.off { opacity: 0.3; filter: grayscale(1); }
+  .res-pct {
+    font-size: 54px; font-weight: 900; text-align: center; line-height: 1.05;
+    background: linear-gradient(120deg, var(--green), var(--blue));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .nivel { display: block; text-align: center; font-size: 16px; font-weight: 800; margin: 6px 0; }
+  input[type=text] {
+    width: 100%; font-size: 17px; padding: 12px 14px; border-radius: 12px;
+    border: 2px solid var(--line); font-family: inherit; margin: 6px 0 12px;
+  }
+  .flash {
+    position: absolute; inset: 0; pointer-events: none; z-index: 15;
+    background: radial-gradient(ellipse at center, rgba(182,34,51,0) 35%, rgba(182,34,51,0.45) 100%);
+    animation: flashOut 0.8s ease-out forwards;
+  }
+  @keyframes flashOut { to { opacity: 0; } }
+  .confetti { position: absolute; inset: 0; pointer-events: none; z-index: 25; overflow: hidden; }
+  .confetti i { position: absolute; top: -16px; width: 9px; height: 14px; border-radius: 2px; animation: cf linear forwards; }
+  @keyframes cf { to { transform: translateY(110vh) rotate(680deg); } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <span style="font-size:20px">👷</span>
+    <span class="pts" id="hudPts">0 pts</span>
+    <div class="bienwrap">
+      <div class="lbl" id="hudBienLbl">Bienestar 100%</div>
+      <div class="bar" id="hudBar"><div style="width:100%"></div></div>
+    </div>
+    <button id="muteBtn" aria-label="Silenciar">🔊</button>
+    <button onclick="location.href='index.html'" aria-label="Salir">🏠</button>
+  </div>
+  <div id="toast"></div>
+  <div id="controles">
+    <div class="grupo">
+      <button class="cbtn" id="btnIzq" aria-label="Izquierda">◀</button>
+      <button class="cbtn" id="btnDer" aria-label="Derecha">▶</button>
+    </div>
+    <div class="grupo">
+      <button class="cbtn accion" id="btnAccion" aria-label="Interactuar">⚡</button>
+    </div>
+  </div>
+  <div id="overlay"></div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   TURNO SEGURO — MODO AVENTURA (nivel 1: Mundo Operativo)
+   Side-scroller en canvas: mueve al personaje, enfréntate a los riesgos.
+   ← → / A D mover · E / espacio / ⚡ interactuar
+   ===================================================================== */
+
+const W = 960, H = 540, PISO = 448, MUNDO = 5700;
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+const stage = document.getElementById("stage"), overlay = document.getElementById("overlay");
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+cv.width = W * dpr; cv.height = H * dpr; ctx.scale(dpr, dpr);
+
+/* ---------- Estado ---------- */
+const S = {
+  nombre: "", x: 120, dir: 1, andando: false, animT: 0,
+  epp: false, oidos: false,
+  puntos: 0, bien: 100, errores: 0, errs: {}, reportes: 0,
+  checkpoint: 120, pausado: true, fin: false, t: 0,
+  flags: { apilado: false, contacto: false, protector: false, electrico: false,
+           alarma: false, evacT0: 0, evacBonus: false,
+           kitIntentos: 0, avisos: {} },
+  limpio: { bodega: true, monta: true, ruido: true }
+};
+const MAX = 175;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ---------- Audio ---------- */
+let actx = null, muted = false;
+function tone(seq) {
+  if (muted) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    let t = actx.currentTime;
+    seq.forEach(p => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = p.w || "sine"; o.frequency.value = p.f;
+      g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + p.d);
+      o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + p.d); t += p.d * 0.85;
+    });
+  } catch (e) {}
+}
+const sndOk = () => tone([{f:523,d:0.12},{f:784,d:0.2}]);
+const sndBad = () => tone([{f:330,d:0.15},{f:196,d:0.3}]);
+const sndAlerta = () => tone([{f:880,d:0.1,w:"square"},{f:880,d:0.1,w:"square"}]);
+const sndPick = () => tone([{f:660,d:0.08},{f:880,d:0.1}]);
+document.getElementById("muteBtn").onclick = function () {
+  muted = !muted; this.textContent = muted ? "🔇" : "🔊";
+};
+
+/* ---------- Entrada ---------- */
+const keys = {};
+let accionPulsada = false;
+addEventListener("keydown", e => {
+  if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
+  keys[e.key.toLowerCase()] = true;
+  if ((e.key === "e" || e.key === "E" || e.key === " ") && !e.repeat) accionPulsada = true;
+});
+addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+function bindBtn(id, key) {
+  const b = document.getElementById(id);
+  const on = ev => { ev.preventDefault(); keys[key] = true; b.classList.add("on"); };
+  const off = ev => { ev.preventDefault(); keys[key] = false; b.classList.remove("on"); };
+  b.addEventListener("pointerdown", on);
+  b.addEventListener("pointerup", off);
+  b.addEventListener("pointerleave", off);
+  b.addEventListener("pointercancel", off);
+}
+bindBtn("btnIzq", "arrowleft");
+bindBtn("btnDer", "arrowright");
+document.getElementById("btnAccion").addEventListener("pointerdown", e => { e.preventDefault(); accionPulsada = true; });
+
+/* ---------- HUD / toast ---------- */
+function hud() {
+  document.getElementById("hudPts").textContent = S.puntos + " pts";
+  document.getElementById("hudBienLbl").textContent = "Bienestar " + Math.round(S.bien) + "%";
+  const bar = document.getElementById("hudBar");
+  bar.className = "bar" + (S.bien < 30 ? " low" : S.bien < 60 ? " warn" : "");
+  bar.firstElementChild.style.width = clamp(S.bien, 0, 100) + "%";
+}
+let toastTimer = null;
+function toast(msg, dur) {
+  const t = document.getElementById("toast");
+  t.innerHTML = "<strong>PREVI:</strong> " + msg;
+  t.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = "none"; }, dur || 4200);
+}
+function avisoUnaVez(id, msg, dur) {
+  if (S.flags.avisos[id]) return;
+  S.flags.avisos[id] = true;
+  toast(msg, dur);
+}
+
+/* ---------- Overlays ---------- */
+function panel(html, tipo) {
+  overlay.innerHTML = '<div class="panel ' + (tipo || "info") + '">' + html + '</div>';
+  overlay.classList.add("visible");
+  S.pausado = true;
+}
+function cerrarPanel() {
+  overlay.classList.remove("visible");
+  overlay.innerHTML = "";
+  stage.classList.remove("frozen");
+  S.pausado = false;
+}
+function flashRojo() {
+  const f = document.createElement("div");
+  f.className = "flash";
+  stage.appendChild(f);
+  setTimeout(() => f.remove(), 850);
+}
+
+/* ---------- Lecciones (error → aprendizaje → reintento) ---------- */
+const LECCIONES = {
+  caida: { t: "Golpe por caída de objeto", exp: "Estabas bajo la zona de carga cuando cayó la caja. La sombra que parpadea es tu señal: nunca camines bajo carga suspendida.", regla: "Bajo carga suspendida, nunca te pares." },
+  monta: { t: "Casi-accidente con montacargas", exp: "El operador con carga tiene puntos ciegos enormes. Usa el botón de contacto visual en la entrada de la zona y cruza cuando esté detenido o lejos.", regla: "Cruce peatonal + mirada al operador." },
+  electrico: { t: "Descarga eléctrica evitada en la simulación", exp: "Nunca te acerques a un cable energizado. Señaliza, aléjate y repórtalo en el punto de reporte para que venga personal autorizado.", regla: "Cable suelto: señaliza, aléjate, reporta." }
+};
+function leccion(id) {
+  const l = LECCIONES[id];
+  S.errores++; S.errs[id] = (S.errs[id] || 0) + 1;
+  S.puntos = Math.max(0, S.puntos - 10);
+  S.bien = clamp(S.bien - 20, 0, 100);
+  if (id === "caida") S.limpio.bodega = false;
+  if (id === "monta") S.limpio.monta = false;
+  stage.classList.add("frozen", "shake");
+  setTimeout(() => stage.classList.remove("shake"), 550);
+  flashRojo(); sndAlerta(); setTimeout(sndBad, 250);
+  hud();
+  panel(
+    '<h2 class="alerta">⚠️ ' + l.t + '</h2>' +
+    '<div style="font-size:26px;font-weight:900;color:var(--red)">−10 pts · bienestar −20%</div>' +
+    '<div class="exp"><strong>PREVI:</strong> ' + l.exp + '</div>' +
+    '<p class="regla">📌 “' + l.regla + '”</p>' +
+    '<button class="btn" onclick="reintentar()">Reintentar desde la zona</button>', "bad");
+}
+function reintentar() {
+  S.x = S.checkpoint;
+  cerrarPanel();
+}
+
+/* ---------- Mundo: entidades ---------- */
+/* Cajas que caen (bodega 700–1300) */
+const cajas = [
+  { x: 810, fase: 0 },
+  { x: 1010, fase: 1.4 },
+  { x: 1210, fase: 2.8 }
+].map(c => ({ ...c, estado: "espera", t: c.fase, y: -80 }));
+const CICLO = { espera: 1.1, aviso: 0.95, cae: 0.42, suelo: 0.7 };
+
+/* Montacargas (1600–2320) */
+const monta = { x: 1650, dir: 1, vel: 150, pausa: 0 };
+
+/* Técnico eléctrico */
+const tecnico = { visible: false, x: 3980, llega: 0 };
+
+/* Interactuables */
+const INTER = [
+  { id: "locker", x: 250, label: "Casillero EPP", activo: () => !S.epp, usar: abrirKit },
+  { id: "apilado", x: 1370, label: "Reportar arrume", activo: () => S.epp && !S.flags.apilado, usar: () => {
+      S.flags.apilado = true; S.reportes++; S.puntos += 20; sndOk(); hud();
+      toast("¡Reporte enviado! Esa pila inestable ya no sorprenderá a nadie. <strong>+20</strong>");
+    } },
+  { id: "contacto", x: 1565, label: "Contacto visual", activo: () => S.epp && !S.flags.contacto, usar: () => {
+      S.flags.contacto = true; monta.pausa = 5.5; S.puntos += 20; sndOk(); hud();
+      toast("El operador te vio y se detuvo. ¡Cruza ahora! <strong>+20</strong>");
+    } },
+  { id: "protector", x: 2470, label: "Protección auditiva", activo: () => S.epp && !S.oidos, usar: () => {
+      S.oidos = true; S.puntos += 10; sndPick(); hud();
+      if (!S.flags.protector) { S.flags.protector = true; }
+      toast("Protectores auditivos puestos. Ahora sí, a la zona de ruido. <strong>+10</strong>");
+    } },
+  { id: "electrico", x: 3660, label: "Señalizar y reportar", activo: () => S.epp && !S.flags.electrico, usar: () => {
+      S.flags.electrico = true; S.reportes++; S.puntos += 20; sndOk(); hud();
+      tecnico.visible = true; tecnico.llega = S.t + 1.4;
+      toast("Zona señalizada y reporte enviado: viene el personal autorizado. <strong>+20</strong>");
+    } }
+];
+
+/* Mini-reto del kit EPP */
+const KIT = [
+  { n: "Casco", ico: "⛑️", ok: true }, { n: "Gafas", ico: "🥽", ok: true },
+  { n: "Chaleco", ico: "🦺", ok: true }, { n: "Botas", ico: "🥾", ok: true },
+  { n: "Auditiva", ico: "🎧", ok: true }, { n: "Gorra", ico: "🧢", ok: false },
+  { n: "Música", ico: "🎵", ok: false }, { n: "Sandalias", ico: "🩴", ok: false }
+];
+let kitSel = [];
+function abrirKit() {
+  kitSel = [];
+  panel(
+    '<h2>🧰 Arma tu kit de EPP</h2>' +
+    '<p style="margin:4px 0 0;font-size:14.5px">La señal exige <strong>5 elementos</strong> para entrar a planta. La barrera no abre sin ellos.</p>' +
+    '<div class="kit-grid">' +
+    KIT.map((k, i) => '<button class="kit-item" id="ki' + i + '" onclick="togKit(' + i + ')"><span class="ico">' + k.ico + '</span>' + k.n + '</button>').join("") +
+    '</div>' +
+    '<button class="btn" onclick="confKit()">Confirmar (<span id="kn">0</span>/5)</button>');
+}
+function togKit(i) {
+  const p = kitSel.indexOf(i);
+  if (p >= 0) kitSel.splice(p, 1); else kitSel.push(i);
+  document.getElementById("ki" + i).classList.toggle("sel", p < 0);
+  document.getElementById("kn").textContent = kitSel.length;
+}
+function confKit() {
+  S.flags.kitIntentos++;
+  const correctos = KIT.map((k, i) => k.ok ? i : -1).filter(i => i >= 0);
+  const perfecto = kitSel.length === 5 && correctos.every(i => kitSel.includes(i));
+  if (!perfecto) {
+    KIT.forEach((k, i) => {
+      const el = document.getElementById("ki" + i);
+      el.classList.remove("sel", "errado");
+      if (kitSel.includes(i) && !k.ok) el.classList.add("errado");
+    });
+    kitSel = kitSel.filter(i => KIT[i].ok);
+    kitSel.forEach(i => document.getElementById("ki" + i).classList.add("sel"));
+    document.getElementById("kn").textContent = kitSel.length;
+    sndBad();
+    toast("Ojo: hay señuelos. Los audífonos de música NO son protección auditiva.", 3500);
+    return;
+  }
+  S.epp = true;
+  const pts = S.flags.kitIntentos === 1 ? 25 : 10;
+  S.puntos += pts; sndOk(); hud();
+  cerrarPanel();
+  toast("¡EPP completo! La barrera está abierta. <strong>+" + pts + "</strong> " + (S.flags.kitIntentos === 1 ? "(kit perfecto 🦅)" : ""));
+}
+
+/* ---------- Actualización ---------- */
+let anteriorMundo = "";
+function update(dt) {
+  S.t += dt;
+
+  /* movimiento */
+  let vx = 0;
+  if (keys["arrowleft"] || keys["a"]) vx -= 1;
+  if (keys["arrowright"] || keys["d"]) vx += 1;
+  const enRuido = S.x > 2560 && S.x < 3260;
+  const vel = 230;
+  S.andando = vx !== 0;
+  if (vx !== 0) { S.dir = vx; S.animT += dt * 9; }
+  S.x = clamp(S.x + vx * vel * dt, 40, MUNDO - 60);
+
+  /* barreras */
+  if (!S.epp && S.x > 415) { S.x = 415; avisoUnaVez("gate", "La barrera no abre sin tu EPP completo. Usa el casillero (⚡).", 4500); }
+
+  /* checkpoints por zona (monotónicos: nunca retroceden) */
+  if (S.x > 620 && S.checkpoint < 640) S.checkpoint = 640;
+  if (S.x > 1480 && S.checkpoint < 1500) S.checkpoint = 1500;
+  if (S.x > 2400 && S.checkpoint < 2420) S.checkpoint = 2420;
+  if (S.x > 3400 && S.checkpoint < 3430) S.checkpoint = 3430;
+  if (S.x > 4280 && S.checkpoint < 4300) S.checkpoint = 4300;
+
+  /* avisos de zona */
+  if (S.x > 560 && S.x < 700) avisoUnaVez("bodega", "Zona de carga suspendida: si ves la <strong>sombra parpadeando</strong>, ¡no pases por ahí!");
+  if (S.x > 1440 && S.x < 1560) avisoUnaVez("monta", "Montacargas en circulación. Usa el punto de <strong>contacto visual</strong> (⚡) y cruza seguro.");
+  if (S.x > 2330 && S.x < 2470) avisoUnaVez("ruido", "Adelante hay 95 dB. Toma tus <strong>protectores auditivos</strong> (⚡) antes de entrar.");
+  if (S.x > 3330 && S.x < 3470) avisoUnaVez("electrico", "¡Cable energizado en el piso! No te acerques: usa el punto de <strong>reporte</strong> (⚡).");
+
+  /* cajas que caen */
+  cajas.forEach(c => {
+    c.t += dt;
+    const dur = CICLO[c.estado];
+    if (c.t >= dur) {
+      c.t = 0;
+      c.estado = c.estado === "espera" ? "aviso" : c.estado === "aviso" ? "cae" : c.estado === "cae" ? "suelo" : "espera";
+      if (c.estado === "cae") c.y = -80;
+    }
+    if (c.estado === "cae") {
+      c.y = -80 + (c.t / CICLO.cae) * (PISO - 40 + 80);
+      if (Math.abs(S.x - c.x) < 34 && c.y > PISO - 120) leccion("caida");
+    }
+  });
+
+  /* montacargas */
+  if (monta.pausa > 0) monta.pausa -= dt;
+  else {
+    monta.x += monta.dir * monta.vel * dt;
+    if (monta.x > 2320) { monta.x = 2320; monta.dir = -1; }
+    if (monta.x < 1640) { monta.x = 1640; monta.dir = 1; }
+    if (Math.abs(S.x - monta.x) < 70 && S.x > 1580 && S.x < 2380) leccion("monta");
+  }
+
+  /* zona de ruido */
+  if (enRuido && !S.oidos) {
+    S.bien = clamp(S.bien - 4.5 * dt, 0, 100);
+    avisoUnaVez("ruidoDolor", "¡Ese ruido está dañando tu audición! Sal y toma los protectores (⚡ en la caja naranja).", 5000);
+  }
+
+  /* cable eléctrico */
+  if (!S.flags.electrico && Math.abs(S.x - 3850) < 55) leccion("electrico");
+
+  /* premios por zona limpia */
+  if (S.x > 1400 && !S.flags.avisos.pBodega) {
+    S.flags.avisos.pBodega = true;
+    if (S.limpio.bodega) { S.puntos += 15; sndOk(); toast("Cruzaste la bodega sin un solo golpe. <strong>+15</strong>"); }
+  }
+  if (S.x > 2400 && !S.flags.avisos.pMonta) {
+    S.flags.avisos.pMonta = true;
+    if (S.limpio.monta) { S.puntos += 15; sndOk(); toast("Zona de montacargas superada sin incidentes. <strong>+15</strong>"); }
+  }
+  if (S.x > 3320 && !S.flags.avisos.pRuido) {
+    S.flags.avisos.pRuido = true;
+    if (S.oidos) { S.puntos += 15; sndOk(); toast("Zona de ruido cruzada con protección. <strong>+15</strong>"); }
+  }
+
+  /* evacuación */
+  if (S.x > 4350 && !S.flags.alarma) {
+    S.flags.alarma = true; S.flags.evacT0 = S.t;
+    toast("🚨 ¡Alarma de evacuación! Sigue las flechas verdes hasta el <strong>punto de encuentro</strong>. Camina firme, sin correr.", 5000);
+    sndAlerta();
+  }
+  if (S.flags.alarma && !S.fin && Math.floor(S.t * 1.2) !== Math.floor((S.t - dt) * 1.2)) sndAlerta();
+  if (S.flags.alarma && S.x > 5480 && !S.fin) terminar();
+
+  hud();
+}
+
+/* ---------- Final ---------- */
+function terminar() {
+  S.fin = true; S.pausado = true;
+  const evacT = S.t - S.flags.evacT0;
+  S.puntos += 25;
+  if (evacT < 30) { S.puntos += 10; S.flags.evacBonus = true; }
+  const pct = clamp(Math.round((S.puntos / MAX) * 100), 0, 100);
+  const niv = pct >= 90 ? "Líder SST" : pct >= 70 ? "Nivel Seguro" : pct >= 50 ? "Nivel Preventivo" : "Nivel Básico";
+  const medallas = [
+    { n: "Cero golpes", ico: "🛡️", ok: S.errores === 0 },
+    { n: "Reportero en acción", ico: "📣", ok: S.reportes >= 2 },
+    { n: "Evacuación ejemplar", ico: "🏃", ok: S.flags.evacBonus }
+  ];
+  try {
+    const arr = JSON.parse(localStorage.getItem("ts_sesiones") || "[]");
+    arr.unshift({ nombre: S.nombre, fecha: new Date().toLocaleString("es-CO"), modo: "Aventura",
+                  puntos: S.puntos, pct: pct, nivel: niv, errores: S.errores, errs: S.errs });
+    localStorage.setItem("ts_sesiones", JSON.stringify(arr.slice(0, 100)));
+  } catch (e) {}
+  panel(
+    '<div style="text-align:center;font-size:40px">🏁</div>' +
+    '<h2 style="text-align:center">' + escHtml(S.nombre) + ', ¡llegaste al punto de encuentro!</h2>' +
+    '<div class="res-pct">' + pct + '%</div>' +
+    '<span class="nivel">' + S.puntos + ' / ' + MAX + ' pts · ' + niv + ' · Bienestar ' + Math.round(S.bien) + '%</span>' +
+    '<div class="medallas">' +
+    medallas.map(m => '<div class="medalla ' + (m.ok ? "" : "off") + '"><span class="ico">' + m.ico + '</span>' + m.n + '</div>').join("") +
+    '</div>' +
+    (S.errores ? '<div class="exp"><strong>PREVI:</strong> Tuviste ' + S.errores + ' incidente(s). En el modo clásico puedes repasar esos riesgos con calma.</div>'
+               : '<div class="exp"><strong>PREVI:</strong> Turno impecable: ni un solo incidente. Así se ve la cultura preventiva en acción. 🏆</div>') +
+    '<button class="btn" onclick="location.reload()">Jugar de nuevo</button>' +
+    '<button class="btn sec" onclick="location.href=\'index.html\'">Volver al menú</button>', "ok");
+  if (pct >= 70) confeti();
+  sndOk();
+}
+function escHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function confeti() {
+  const c = document.createElement("div"); c.className = "confetti";
+  const cols = ["#00795C","#F2B705","#0A5CA8","#E57373","#FFD54F"];
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement("i");
+    p.style.left = Math.random() * 100 + "%";
+    p.style.background = cols[i % cols.length];
+    p.style.animationDuration = (2.2 + Math.random() * 2) + "s";
+    p.style.animationDelay = (Math.random() * 0.8) + "s";
+    c.appendChild(p);
+  }
+  stage.appendChild(c);
+  setTimeout(() => c.remove(), 5500);
+}
+
+/* ---------- Dibujo ---------- */
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function draw() {
+  const cam = clamp(S.x - W * 0.42, 0, MUNDO - W);
+
+  /* pared con gradiente */
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#EDF2EE"); g.addColorStop(0.75, "#D8E0DA"); g.addColorStop(1, "#C9D2CB");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  /* parallax lejano: ventanas y cerchas */
+  ctx.save(); ctx.translate(-cam * 0.35, 0);
+  ctx.fillStyle = "rgba(163,190,205,0.5)";
+  for (let x = 60; x < MUNDO * 0.5 + W; x += 300) { rr(x, 60, 160, 90, 8); ctx.fill(); }
+  ctx.strokeStyle = "rgba(120,140,150,0.35)"; ctx.lineWidth = 6;
+  for (let x = -100; x < MUNDO * 0.5 + W; x += 220) {
+    ctx.beginPath(); ctx.moveTo(x, 34); ctx.lineTo(x + 110, 6); ctx.lineTo(x + 220, 34); ctx.stroke();
+  }
+  ctx.restore();
+
+  /* parallax medio: siluetas de máquinas */
+  ctx.save(); ctx.translate(-cam * 0.65, 0);
+  ctx.fillStyle = "rgba(96,115,110,0.28)";
+  for (let x = 40; x < MUNDO * 0.75 + W; x += 420) {
+    ctx.fillRect(x, 250, 140, 200); ctx.fillRect(x + 40, 210, 60, 40);
+    ctx.fillRect(x + 220, 300, 100, 150);
+  }
+  ctx.restore();
+
+  /* mundo */
+  ctx.save(); ctx.translate(-cam, 0);
+
+  /* piso */
+  ctx.fillStyle = "#B9C2BC"; ctx.fillRect(cam - 20, PISO, W + 40, H - PISO);
+  ctx.strokeStyle = "rgba(31,38,42,0.18)"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cam - 20, PISO); ctx.lineTo(cam + W + 20, PISO); ctx.stroke();
+
+  dibujarVestier();
+  dibujarBodega();
+  dibujarMontacargas();
+  dibujarRuido();
+  dibujarElectrico();
+  dibujarEvacuacion();
+
+  /* interactuables: prompt ⚡ */
+  INTER.forEach(it => {
+    if (!it.activo()) return;
+    const cerca = Math.abs(S.x - it.x) < 62;
+    ctx.font = "700 13px Segoe UI";
+    ctx.textAlign = "center";
+    if (cerca) {
+      const bob = Math.sin(S.t * 5) * 4;
+      ctx.fillStyle = "#00795C";
+      ctx.beginPath(); ctx.arc(it.x, 300 + bob, 16, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.font = "800 16px Segoe UI";
+      ctx.fillText("⚡", it.x, 306 + bob);
+      ctx.fillStyle = "#1F262A"; ctx.font = "700 13px Segoe UI";
+      ctx.fillText(it.label, it.x, 340 + bob);
+    } else {
+      ctx.fillStyle = "rgba(0,121,92,0.7)";
+      ctx.beginPath(); ctx.arc(it.x, 306, 10, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.font = "800 11px Segoe UI"; ctx.fillText("⚡", it.x, 310);
+    }
+  });
+
+  dibujarPrevi();
+  dibujarJugador();
+  ctx.restore();
+
+  /* efecto de ruido sin protección */
+  if (S.x > 2560 && S.x < 3260 && !S.oidos) {
+    ctx.strokeStyle = "rgba(182,34,51," + (0.25 + Math.sin(S.t * 14) * 0.15) + ")";
+    ctx.lineWidth = 16; ctx.strokeRect(4, 4, W - 8, H - 8);
+  }
+}
+
+function dibujarVestier() {
+  /* casillero */
+  ctx.fillStyle = "#78909C"; rr(210, 250, 84, 198, 6); ctx.fill();
+  ctx.strokeStyle = "#546E7A"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(252, 250); ctx.lineTo(252, 448); ctx.stroke();
+  ctx.fillStyle = "#546E7A";
+  [278, 292].forEach(y => { ctx.fillRect(220, y, 22, 5); ctx.fillRect(262, y, 22, 5); });
+  ctx.font = "22px Segoe UI"; ctx.textAlign = "center";
+  ctx.fillText("⛑️", 231, 240); ctx.fillText("🦺", 273, 240);
+  /* señal EPP */
+  ctx.fillStyle = "#0A5CA8"; rr(330, 200, 120, 34, 6); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "800 13px Segoe UI";
+  ctx.fillText("EPP OBLIGATORIO", 390, 222);
+  /* barrera */
+  const abierta = S.epp;
+  ctx.fillStyle = "#455A64"; ctx.fillRect(430, 330, 12, 118);
+  ctx.save(); ctx.translate(436, 340); ctx.rotate(abierta ? -1.35 : 0);
+  const gb = ctx.createLinearGradient(0, 0, 130, 0);
+  for (let i = 0; i < 6; i++) { gb.addColorStop(i / 6, i % 2 ? "#23272B" : "#F2B705"); }
+  ctx.fillStyle = gb; ctx.fillRect(0, -7, 130, 14);
+  ctx.restore();
+}
+
+function dibujarBodega() {
+  /* estantería con arrume inestable */
+  ctx.fillStyle = "#616161"; ctx.fillRect(660, 130, 10, 318); ctx.fillRect(1330, 130, 10, 318);
+  ctx.fillStyle = "#757575"; ctx.fillRect(660, 150, 680, 10);
+  ctx.fillStyle = "#8D6E4E";
+  [730, 900, 1090, 1250].forEach(x => { ctx.fillStyle = "#BC8F5E"; ctx.fillRect(x, 96, 54, 52); ctx.strokeStyle = "#8D6E4E"; ctx.strokeRect(x, 96, 54, 52); });
+  if (!S.flags.apilado) {
+    ctx.save(); ctx.translate(1385, 108); ctx.rotate(0.28);
+    ctx.fillStyle = "#BC8F5E"; ctx.fillRect(-26, -24, 52, 48); ctx.strokeStyle = "#8D6E4E"; ctx.strokeRect(-26, -24, 52, 48);
+    ctx.restore();
+    ctx.fillStyle = "#B62233"; ctx.font = "900 22px Segoe UI"; ctx.textAlign = "center";
+    if (Math.sin(S.t * 6) > 0) ctx.fillText("!", 1385, 70);
+  }
+  /* sendero */
+  ctx.fillStyle = "rgba(242,183,5,0.4)"; ctx.fillRect(680, PISO + 26, 660, 26);
+  /* cajas cayendo */
+  cajas.forEach(c => {
+    if (c.estado === "aviso") {
+      if (Math.sin(S.t * 16) > 0) {
+        ctx.fillStyle = "rgba(182,34,51,0.4)";
+        ctx.beginPath(); ctx.ellipse(c.x, PISO - 2, 36, 8, 0, 0, 7); ctx.fill();
+      }
+      ctx.fillStyle = "#B62233"; ctx.font = "900 20px Segoe UI"; ctx.textAlign = "center";
+      ctx.fillText("⚠", c.x, PISO - 60);
+    }
+    if (c.estado === "cae") {
+      ctx.fillStyle = "#BC8F5E"; ctx.strokeStyle = "#8D6E4E"; ctx.lineWidth = 2;
+      ctx.fillRect(c.x - 24, c.y, 48, 44); ctx.strokeRect(c.x - 24, c.y, 48, 44);
+      ctx.strokeStyle = "rgba(141,110,78,0.5)";
+      ctx.beginPath(); ctx.moveTo(c.x - 10, c.y - 18); ctx.lineTo(c.x - 10, c.y - 4); ctx.stroke();
+    }
+    if (c.estado === "suelo") {
+      ctx.fillStyle = "#BC8F5E"; ctx.strokeStyle = "#8D6E4E"; ctx.lineWidth = 2;
+      ctx.fillRect(c.x - 24, PISO - 44, 48, 44); ctx.strokeRect(c.x - 24, PISO - 44, 48, 44);
+    }
+  });
+}
+
+function dibujarMontacargas() {
+  /* cruce peatonal */
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  for (let i = 0; i < 5; i++) ctx.fillRect(2340 + i * 4, PISO + 14 + i * 9, 90, 5);
+  const m = monta;
+  ctx.save(); ctx.translate(m.x, PISO - 66);
+  if (m.dir < 0) { ctx.scale(-1, 1); }
+  /* cuerpo */
+  ctx.fillStyle = "#F57F17"; rr(-46, 12, 86, 40, 7); ctx.fill();
+  ctx.fillStyle = "#455A64"; ctx.fillRect(-38, -28, 7, 42); ctx.fillRect(16, -28, 7, 42); ctx.fillRect(-42, -32, 70, 6);
+  /* mástil y carga */
+  ctx.fillStyle = "#37474F"; ctx.fillRect(46, -20, 6, 78);
+  ctx.fillRect(52, 40, 30, 5); ctx.fillRect(52, 52, 30, 5);
+  ctx.fillStyle = "#BC8F5E"; ctx.fillRect(54, 8, 30, 32); ctx.strokeStyle = "#8D6E4E"; ctx.strokeRect(54, 8, 30, 32);
+  /* ruedas */
+  ctx.fillStyle = "#212121";
+  ctx.beginPath(); ctx.arc(-26, 56, 13, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(22, 56, 13, 0, 7); ctx.fill();
+  ctx.fillStyle = "#78909C";
+  ctx.beginPath(); ctx.arc(-26, 56, 5, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(22, 56, 5, 0, 7); ctx.fill();
+  /* operador */
+  ctx.fillStyle = "#D9A066"; ctx.beginPath(); ctx.arc(-8, -6, 9, 0, 7); ctx.fill();
+  ctx.fillStyle = "#F2B705"; ctx.beginPath(); ctx.arc(-8, -9, 9, Math.PI, 0); ctx.fill();
+  if (m.pausa > 0) {
+    ctx.fillStyle = "#00795C"; ctx.font = "900 22px Segoe UI"; ctx.textAlign = "center";
+    ctx.fillText("✓", -8, -30);
+  }
+  ctx.restore();
+  /* luz de aviso si se mueve */
+  if (m.pausa <= 0 && Math.sin(S.t * 10) > 0) {
+    ctx.fillStyle = "#F57F17";
+    ctx.beginPath(); ctx.arc(m.x - (m.dir > 0 ? 42 : -42), PISO - 100, 5, 0, 7); ctx.fill();
+  }
+}
+
+function dibujarRuido() {
+  /* compresores */
+  [2620, 2860, 3100].forEach(x => {
+    ctx.fillStyle = "#78909C"; rr(x, 300, 120, 148, 8); ctx.fill();
+    ctx.fillStyle = "#546E7A"; ctx.beginPath(); ctx.arc(x + 40, 360, 24, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#B0BEC5"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x + 40, 340); ctx.lineTo(x + 40, 380); ctx.moveTo(x + 20, 360); ctx.lineTo(x + 60, 360); ctx.stroke();
+    /* ondas */
+    const k = 0.4 + 0.6 * Math.abs(Math.sin(S.t * 3 + x));
+    ctx.strokeStyle = "rgba(245,127,23," + k + ")"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(x + 95, 330, 18, -0.9, 0.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x + 95, 330, 30, -0.8, 0.8); ctx.stroke();
+  });
+  /* señal 95 dB */
+  ctx.fillStyle = "#F2B705"; rr(2500, 190, 96, 34, 6); ctx.fill();
+  ctx.strokeStyle = "#23272B"; ctx.lineWidth = 2; rr(2500, 190, 96, 34, 6); ctx.stroke();
+  ctx.fillStyle = "#1F262A"; ctx.font = "800 15px Segoe UI"; ctx.textAlign = "center";
+  ctx.fillText("95 dB 🎧", 2548, 213);
+  /* caja de protectores */
+  ctx.fillStyle = "#F57F17"; rr(2450, 380, 44, 68, 6); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "20px Segoe UI"; ctx.fillText("🎧", 2472, 420);
+}
+
+function dibujarElectrico() {
+  /* tablero */
+  ctx.fillStyle = "#78909C"; rr(3560, 220, 80, 120, 6); ctx.fill();
+  ctx.fillStyle = "#455A64"; ctx.fillRect(3572, 234, 56, 30);
+  ["#B62233", "#F2B705", "#00795C"].forEach((c, i) => {
+    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(3584 + i * 18, 288, 5, 0, 7); ctx.fill();
+  });
+  /* cable al piso */
+  ctx.strokeStyle = "#B62233"; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(3640, 340); ctx.quadraticCurveTo(3760, 420, 3850, PISO - 4); ctx.stroke();
+  if (!S.flags.electrico) {
+    /* chispas */
+    const k = Math.sin(S.t * 18);
+    if (k > 0) {
+      ctx.strokeStyle = "#F2B705"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(3850, PISO - 8); ctx.lineTo(3840, PISO - 26); ctx.lineTo(3852, PISO - 22); ctx.lineTo(3844, PISO - 42); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(3856, PISO - 6); ctx.lineTo(3868, PISO - 22); ctx.stroke();
+    }
+    ctx.fillStyle = "#B62233"; ctx.font = "900 22px Segoe UI"; ctx.textAlign = "center";
+    if (Math.sin(S.t * 6) > 0) ctx.fillText("⚡", 3850, PISO - 60);
+  } else {
+    /* cono */
+    ctx.fillStyle = "#F57F17";
+    ctx.beginPath(); ctx.moveTo(3790, PISO); ctx.lineTo(3806, PISO - 40); ctx.lineTo(3822, PISO); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.fillRect(3796, PISO - 22, 20, 7);
+    /* técnico */
+    if (tecnico.visible && S.t > tecnico.llega) {
+      ctx.fillStyle = "#D9A066"; ctx.beginPath(); ctx.arc(3950, PISO - 88, 12, 0, 7); ctx.fill();
+      ctx.fillStyle = "#0A5CA8"; rr(3936, PISO - 76, 28, 44, 6); ctx.fill();
+      ctx.fillStyle = "#F2B705"; ctx.beginPath(); ctx.arc(3950, PISO - 92, 12, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = "#37474F"; ctx.fillRect(3938, PISO - 32, 9, 32); ctx.fillRect(3953, PISO - 32, 9, 32);
+      ctx.fillStyle = "#00795C"; ctx.font = "900 18px Segoe UI"; ctx.textAlign = "center";
+      ctx.fillText("✓", 3950, PISO - 108);
+    }
+  }
+  /* señal riesgo eléctrico */
+  ctx.fillStyle = "#F2B705";
+  ctx.beginPath(); ctx.moveTo(3700, 200); ctx.lineTo(3722, 238); ctx.lineTo(3678, 238); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#23272B"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#1F262A"; ctx.font = "900 17px Segoe UI"; ctx.textAlign = "center";
+  ctx.fillText("⚡", 3700, 233);
+}
+
+function dibujarEvacuacion() {
+  if (S.flags.alarma) {
+    /* alarma */
+    const k = Math.sin(S.t * 8) > 0;
+    ctx.fillStyle = k ? "#B62233" : "#7E1424";
+    ctx.beginPath(); ctx.arc(4420, 150, 14, 0, 7); ctx.fill();
+    if (k) {
+      ctx.strokeStyle = "rgba(182,34,51,0.5)"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(4420, 150, 26, 0, 7); ctx.stroke();
+    }
+    /* flechas de ruta */
+    ctx.fillStyle = "#00795C"; ctx.font = "900 30px Segoe UI"; ctx.textAlign = "center";
+    for (let x = 4500; x < 5400; x += 220) {
+      const bob = Math.sin(S.t * 4 + x) * 3;
+      ctx.fillText("→", x + bob, PISO + 40);
+    }
+  }
+  /* señal salida + puerta */
+  ctx.fillStyle = "#00795C"; rr(5360, 170, 130, 40, 6); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "800 17px Segoe UI"; ctx.textAlign = "center";
+  ctx.fillText("SALIDA →", 5425, 197);
+  ctx.fillStyle = "#8D6E63"; ctx.fillRect(5470, 240, 90, 208);
+  ctx.strokeStyle = "#5D4037"; ctx.lineWidth = 4; ctx.strokeRect(5470, 240, 90, 208);
+  ctx.fillStyle = "#37474F"; ctx.beginPath(); ctx.arc(5486, 348, 5, 0, 7); ctx.fill();
+  /* punto de encuentro */
+  ctx.fillStyle = "#00795C"; rr(5560, 300, 110, 60, 8); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "800 12px Segoe UI";
+  ctx.fillText("PUNTO DE", 5615, 325); ctx.fillText("ENCUENTRO", 5615, 342);
+}
+
+function dibujarPrevi() {
+  const px = S.x - S.dir * 55, py = 250 + Math.sin(S.t * 2.4) * 8;
+  /* hélice */
+  ctx.strokeStyle = "#607D8B"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(px, py - 22); ctx.lineTo(px, py - 15); ctx.stroke();
+  ctx.fillStyle = "#78909C";
+  const hw = 12 * Math.abs(Math.sin(S.t * 12)) + 3;
+  ctx.beginPath(); ctx.ellipse(px, py - 24, hw, 2.4, 0, 0, 7); ctx.fill();
+  /* casco flotante */
+  ctx.fillStyle = "#F2B705"; ctx.strokeStyle = "#C99700"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(px, py, 16, Math.PI, 0); ctx.fill(); ctx.stroke();
+  rr(px - 20, py - 2, 40, 7, 3.5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#212121";
+  ctx.beginPath(); ctx.arc(px - 6, py - 6, 3, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(px + 6, py - 6, 3, 0, 7); ctx.fill();
+}
+
+function dibujarJugador() {
+  const x = S.x, y = PISO;
+  /* sombra */
+  ctx.fillStyle = "rgba(31,38,42,0.22)";
+  ctx.beginPath(); ctx.ellipse(x, y - 3, 24, 6, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(x, y - 78);
+  if (S.dir < 0) ctx.scale(-1, 1);
+  const paso = S.andando ? Math.sin(S.animT) * 9 : 0;
+  /* piernas */
+  ctx.fillStyle = "#37474F";
+  rr(-11 + paso * 0.5, 46, 10, 28, 4); ctx.fill();
+  rr(2 - paso * 0.5, 46, 10, 28, 4); ctx.fill();
+  ctx.fillStyle = "#212121";
+  rr(-13 + paso * 0.5, 70, 14, 7, 3); ctx.fill();
+  rr(0 - paso * 0.5, 70, 14, 7, 3); ctx.fill();
+  /* torso */
+  ctx.fillStyle = "#1565C0"; rr(-15, 10, 30, 40, 7); ctx.fill();
+  if (S.epp) {
+    ctx.fillStyle = "#F57F17"; rr(-15, 10, 30, 27, 7); ctx.fill();
+    ctx.fillStyle = "#FFF59D"; ctx.fillRect(-15, 19, 30, 4);
+  }
+  /* brazos */
+  ctx.fillStyle = "#1565C0";
+  rr(-22, 12, 8, 26, 4); ctx.fill();
+  rr(14, 12, 8, 26, 4); ctx.fill();
+  /* cabeza */
+  ctx.fillStyle = "#D9A066"; ctx.beginPath(); ctx.arc(0, -2, 14, 0, 7); ctx.fill();
+  ctx.fillStyle = "#212121";
+  ctx.beginPath(); ctx.arc(4, -5, 1.8, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(10, -5, 1.8, 0, 7); ctx.fill();
+  /* gafas si EPP */
+  if (S.epp) { ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(7, -5, 6, 0, 7); ctx.stroke(); }
+  /* protectores auditivos */
+  if (S.oidos) {
+    ctx.fillStyle = "#F57F17";
+    ctx.beginPath(); ctx.arc(-6, -4, 5, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#F57F17"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, -8, 11, Math.PI, 0); ctx.stroke();
+  }
+  /* casco o cabello */
+  if (S.epp) {
+    ctx.fillStyle = "#F2B705"; ctx.strokeStyle = "#C99700"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, -8, 14, Math.PI, 0); ctx.fill(); ctx.stroke();
+    ctx.fillRect(-16, -9, 32, 5);
+  } else {
+    ctx.fillStyle = "#4E342E";
+    ctx.beginPath(); ctx.arc(0, -6, 13.5, Math.PI, 0); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ---------- Acción (interactuar) ---------- */
+function accionar() {
+  let mejor = null, dist = 66;
+  INTER.forEach(it => {
+    if (!it.activo()) return;
+    const d = Math.abs(S.x - it.x);
+    if (d < dist) { dist = d; mejor = it; }
+  });
+  if (mejor) mejor.usar();
+}
+
+/* ---------- Bucle ---------- */
+let tPrev = performance.now();
+function loop(t) {
+  const dt = clamp((t - tPrev) / 1000, 0, 0.05);
+  tPrev = t;
+  if (!S.pausado && !S.fin) {
+    if (accionPulsada) { accionPulsada = false; accionar(); }
+    update(dt);
+  } else {
+    accionPulsada = false;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- Intro ---------- */
+function intro() {
+  panel(
+    '<div style="text-align:center;font-size:44px">👷</div>' +
+    '<h2 style="text-align:center">Modo Aventura · Mundo Operativo</h2>' +
+    '<p style="font-size:14.5px;text-align:center;margin:4px 0 12px">Recorre la planta, esquiva los riesgos reales y llega al punto de encuentro. Los errores enseñan: la simulación te protege, la vida real no.</p>' +
+    '<div class="exp"><strong>Controles:</strong> ← → (o A/D) para moverte · <strong>E</strong>, espacio o el botón ⚡ para interactuar con casilleros, reportes y señales. En celular usa los botones en pantalla.</div>' +
+    '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
+    '<button class="btn" onclick="empezar()">▶ Iniciar el turno</button>' +
+    '<button class="btn sec" onclick="location.href=\'index.html\'">Volver al menú</button>');
+}
+function empezar() {
+  const n = document.getElementById("nombre").value.trim();
+  S.nombre = n || "Jugador(a)";
+  cerrarPanel();
+  toast("¡Buen turno, " + escHtml(S.nombre) + "! Primero lo primero: tu EPP está en el casillero (acércate y pulsa ⚡).", 5200);
+}
+
+window.togKit = togKit; window.confKit = confKit; window.empezar = empezar;
+window.reintentar = reintentar; window.AV = { S, monta, cajas, leccion, accionar, terminar, update, INTER };
+
+intro();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

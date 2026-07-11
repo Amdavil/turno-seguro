@@ -1263,7 +1263,8 @@ function renderHome() {
     (emp.nombre ? '<p class="empresa-nombre">' + esc(emp.nombre) + '</p>' : '') +
     '<div class="mini-hazard" aria-hidden="true"></div>' +
     '<p class="tagline">Misión: cero accidentes. Termina tu turno igual que empezaste: completo y sano.</p>' +
-    '<button class="btn" onclick="renderSetup(\'completo\')">▶ Iniciar misión (turno completo)</button>' +
+    '<button class="btn" onclick="location.href=\'aventura.html\'">🎮 Modo aventura (mueve al personaje)</button>' +
+    '<button class="btn blue" onclick="renderSetup(\'completo\')">▶ Modo clásico (turno completo)</button>' +
     '<button class="btn sec" onclick="renderModos()">🌍 Seleccionar mundo</button>' +
     '<button class="btn sec" onclick="renderAprende()">📘 Aprender antes de jugar</button>' +
     '<button class="btn sec" onclick="renderHistorial()">📊 Resultados</button>' +
