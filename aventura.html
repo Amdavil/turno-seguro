@@ -98,9 +98,9 @@
   #controles .grupo { display: flex; gap: 14px; }
   .cbtn {
     pointer-events: auto; user-select: none;
-    width: 72px; height: 72px; border-radius: 50%;
-    border: none; font-size: 30px; font-weight: 800; cursor: pointer;
-    background: rgba(255,255,255,0.88); color: var(--ink);
+    width: 64px; height: 64px; border-radius: 50%;
+    border: none; font-size: 26px; font-weight: 800; cursor: pointer;
+    background: rgba(255,255,255,0.6); color: var(--ink);
     box-shadow: 0 5px 0 rgba(0,0,0,0.3), 0 10px 22px rgba(0,0,0,0.35);
     display: flex; align-items: center; justify-content: center;
   }
@@ -282,8 +282,16 @@ function bindBtn(id, key) {
 bindBtn("btnIzq", "arrowleft");
 bindBtn("btnDer", "arrowright");
 accionUI.addEventListener("pointerdown", e => { e.preventDefault(); accionPulsada = true; });
-/* tocar el escenario también interactúa (si hay algo cerca) */
-cv.addEventListener("pointerdown", () => { accionPulsada = true; });
+/* TOCA A DÓNDE IR: el personaje camina solo hasta el punto tocado */
+let targetX = null, camActual = 0;
+cv.addEventListener("pointerdown", e => {
+  if (S.pausado || S.fin) return;
+  const r = cv.getBoundingClientRect();
+  const wx = camActual + ((e.clientX - r.left) / r.width) * W;
+  targetX = clamp(wx, 40, MUNDO - 60);
+  S.flags.avisos.primerTap = true;
+  sndPick();
+});
 
 /* ---------- HUD, objetivo y toast ---------- */
 function hud() {
@@ -469,16 +477,28 @@ function update(dt) {
   let vx = 0;
   if (keys["arrowleft"] || keys["a"]) vx -= 1;
   if (keys["arrowright"] || keys["d"]) vx += 1;
+  if (vx !== 0) targetX = null; /* el teclado manda si se usa */
+  else if (targetX !== null) {
+    const d = targetX - S.x;
+    if (Math.abs(d) > 8) vx = Math.sign(d);
+    else targetX = null;
+  }
   S.andando = vx !== 0;
   if (vx !== 0) { S.dir = vx; S.animT += dt * 9; }
   S.x = clamp(S.x + vx * 250 * dt, 40, MUNDO - 60);
 
   /* barrera EPP */
-  if (!S.epp && S.x > 415) { S.x = 415; avisoUnaVez("gate", "La barrera no abre sin tu EPP completo. Ve al casillero.", 4500); }
-  /* casillero se abre solo la primera vez que te acercas */
-  if (!S.epp && Math.abs(S.x - 250) < 70 && !S.flags.avisos.kitAuto && !overlay.classList.contains("visible")) {
-    S.flags.avisos.kitAuto = true;
-    abrirKit();
+  if (!S.epp && S.x > 415) {
+    S.x = 415;
+    if (targetX !== null && targetX > 415) targetX = null;
+    avisoUnaVez("gate", "La barrera no abre sin tu EPP completo. Toca el casillero para equiparte.", 4500);
+  }
+  /* interacción AUTOMÁTICA al llegar a un punto usable */
+  const cerca = interCercano();
+  if (cerca && Math.abs(S.x - cerca.x) < 58 && S.t > (cerca.cdT || 0)) {
+    cerca.cdT = S.t + 3;
+    if (targetX !== null && Math.abs(targetX - cerca.x) < 130) targetX = null;
+    cerca.usar();
   }
 
   /* checkpoints monotónicos */
@@ -633,6 +653,7 @@ const TITULOS = [
 
 function draw() {
   const cam = clamp(S.x - W * 0.42, 0, MUNDO - W);
+  camActual = cam;
 
   /* pared con gradiente */
   const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -741,16 +762,35 @@ function draw() {
     }
   });
 
-  /* flecha guía hacia el objetivo */
+  /* marcador del punto tocado (a dónde camina) */
+  if (targetX !== null) {
+    const k = (S.t * 2) % 1;
+    ctx.strokeStyle = "rgba(10,92,168," + (1 - k) + ")"; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.ellipse(targetX, PISO - 2, 12 + k * 22, (12 + k * 22) * 0.3, 0, 0, 7); ctx.stroke();
+    ctx.fillStyle = "#0A5CA8";
+    ctx.beginPath(); ctx.ellipse(targetX, PISO - 2, 6, 2.4, 0, 0, 7); ctx.fill();
+  }
+
+  /* objetivo: anillo pulsante en el suelo + flecha */
   const obj = objetivoActual();
-  if (Math.abs(obj.x - S.x) > 130) {
+  if (Math.abs(obj.x - S.x) > 100) {
+    const k2 = (S.t * 1.4) % 1;
+    ctx.strokeStyle = "rgba(242,183,5," + (0.95 - k2 * 0.7) + ")"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(obj.x, PISO - 2, 16 + k2 * 26, (16 + k2 * 26) * 0.3, 0, 0, 7); ctx.stroke();
     const objEnPantalla = obj.x > cam + 30 && obj.x < cam + W - 30;
-    ctx.fillStyle = "#F2B705"; ctx.strokeStyle = "#8A6200"; ctx.lineWidth = 2;
     if (objEnPantalla) {
       const bob = Math.sin(S.t * 4) * 6;
+      ctx.fillStyle = "#F2B705"; ctx.strokeStyle = "#8A6200"; ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(obj.x - 12, 250 + bob); ctx.lineTo(obj.x + 12, 250 + bob); ctx.lineTo(obj.x, 268 + bob);
       ctx.closePath(); ctx.fill(); ctx.stroke();
+      /* mano de tutorial hasta el primer toque */
+      if (!S.flags.avisos.primerTap && !S.pausado) {
+        ctx.font = "34px Segoe UI"; ctx.textAlign = "center";
+        ctx.fillText("👆", obj.x, PISO - 46 + Math.sin(S.t * 4) * 8);
+        ctx.font = "800 15px Segoe UI"; ctx.fillStyle = "#1F262A";
+        ctx.fillText("Toca aquí", obj.x, PISO - 88);
+      }
     }
   }
   ctx.restore();
@@ -824,6 +864,13 @@ function dibujarBodega() {
     if (Math.sin(S.t * 6) > 0) ctx.fillText("!", 1385, 70);
   }
   ctx.fillStyle = "rgba(242,183,5,0.4)"; ctx.fillRect(680, PISO + 26, 660, 26);
+  /* franja roja bajo cada punto de caída activo */
+  cajas.forEach(c => {
+    if (c.estado === "aviso" || c.estado === "cae") {
+      ctx.fillStyle = "rgba(182,34,51," + (0.25 + Math.abs(Math.sin(S.t * 6)) * 0.2) + ")";
+      ctx.fillRect(c.x - 40, PISO + 8, 80, 18);
+    }
+  });
   cajas.forEach(c => {
     if (c.estado === "aviso") {
       if (Math.sin(S.t * 12) > -0.3) {
@@ -846,6 +893,14 @@ function dibujarMontacargas() {
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   for (let i = 0; i < 5; i++) ctx.fillRect(2340 + i * 4, PISO + 12 + i * 8, 90, 5);
   const m = monta;
+  /* franja de estado en el piso: rojo = en movimiento, verde = detenido (cruza) */
+  if (m.pausa > 0) {
+    ctx.fillStyle = "rgba(0,121,92,0.30)";
+    ctx.fillRect(1600, PISO + 8, 760, 18);
+  } else {
+    ctx.fillStyle = "rgba(182,34,51," + (0.22 + Math.abs(Math.sin(S.t * 5)) * 0.15) + ")";
+    ctx.fillRect(m.x - 85, PISO + 8, 170, 18);
+  }
   /* sombra */
   ctx.fillStyle = "rgba(31,38,42,0.2)";
   ctx.beginPath(); ctx.ellipse(m.x + 10, PISO - 4, 62, 8, 0, 0, 7); ctx.fill();
@@ -905,6 +960,14 @@ function dibujarElectrico() {
   ["#B62233", "#F2B705", "#00795C"].forEach((c, i) => {
     ctx.fillStyle = c; ctx.beginPath(); ctx.arc(3584 + i * 18, 288, 5, 0, 7); ctx.fill();
   });
+  /* franja de estado en el piso */
+  if (!S.flags.electrico) {
+    ctx.fillStyle = "rgba(182,34,51," + (0.22 + Math.abs(Math.sin(S.t * 5)) * 0.15) + ")";
+    ctx.fillRect(3790, PISO + 8, 130, 18);
+  } else {
+    ctx.fillStyle = "rgba(0,121,92,0.30)";
+    ctx.fillRect(3790, PISO + 8, 130, 18);
+  }
   ctx.strokeStyle = "#B62233"; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(3640, 340); ctx.quadraticCurveTo(3760, 420, 3850, PISO - 4); ctx.stroke();
   if (!S.flags.electrico) {
@@ -1056,12 +1119,12 @@ function intro() {
   panel(
     '<div style="text-align:center;font-size:44px">👷</div>' +
     '<h2 style="text-align:center">Modo Aventura · Mundo Operativo</h2>' +
-    '<p style="font-size:14.5px;text-align:center;margin:4px 0 10px">Recorre la planta, esquiva los riesgos y llega al punto de encuentro. El objetivo de turno siempre está arriba 🎯 y la flecha amarilla te guía.</p>' +
+    '<p style="font-size:14.5px;text-align:center;margin:4px 0 10px">Recorre la planta, esquiva los riesgos y llega al punto de encuentro. Tu objetivo siempre está arriba 🎯 y la flecha amarilla te guía.</p>' +
     '<div class="ctl-demo">' +
-    '<div class="k">◀ ▶<small>moverte</small></div>' +
-    '<div class="k">⚡<small>botón verde: interactuar</small></div>' +
-    '<div class="k">E / espacio<small>también interactúa</small></div>' +
+    '<div class="k" style="border-color:var(--green)">👆<small><strong>Toca a dónde ir</strong><br>y el personaje camina solo</small></div>' +
+    '<div class="k">◀ ▶ / ← →<small>también sirven</small></div>' +
     '</div>' +
+    '<p style="font-size:13px;text-align:center;color:var(--muted);margin:2px 0 8px">Al llegar a un punto verde ⚡ el personaje lo usa automáticamente. Rojo en el piso = peligro; verde = paso seguro.</p>' +
     '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
     '<button class="btn" onclick="empezar()">▶ Iniciar el turno</button>' +
     '<button class="btn sec" onclick="location.href=\'index.html\'">Volver al menú</button>');
@@ -1070,12 +1133,13 @@ function empezar() {
   const n = document.getElementById("nombre").value.trim();
   S.nombre = n || "Jugador(a)";
   cerrarPanel();
-  toast("¡Buen turno, " + escHtml(S.nombre) + "! Camina hacia el casillero → y arma tu EPP.", 5200);
+  toast("¡Buen turno, " + escHtml(S.nombre) + "! <strong>Toca el casillero</strong> (donde está la mano 👆) y tu personaje irá solo.", 5600);
 }
 
 window.togKit = togKit; window.confKit = confKit; window.empezar = empezar;
 window.reintentar = reintentar;
-window.AV = { S, monta, cajas, leccion, accionar, terminar, update, INTER, objetivoActual };
+window.AV = { S, monta, cajas, leccion, accionar, terminar, update, INTER, objetivoActual,
+              getTarget: () => targetX, setTarget: (x) => { targetX = x; } };
 
 intro();
 requestAnimationFrame(loop);
