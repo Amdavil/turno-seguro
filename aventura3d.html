@@ -208,11 +208,13 @@ const S = {
   puntos: 0, bien: 100, errores: 0, errs: {}, reportes: 0,
   checkpoint: { x: 3, z: 0 }, pausado: true, fin: false, t: 0,
   flags: { apilado: false, contacto: false, electrico: false,
+           cables: false, derrame: false, pausa: false,
+           archivo: false, ergo: false, cierre: false,
            alarma: false, evacT0: 0, evacBonus: false,
            kitIntentos: 0, avisos: {} },
-  limpio: { bodega: true, monta: true, ruido: true }
+  limpio: { bodega: true, monta: true, ruido: true, carrito: true }
 };
-const MAX = 175;
+const MAX = 295;
 let target = null;     /* {x,z} destino del toque */
 let autoPilot = false; /* guía automática hacia el objetivo */
 const irBtn = document.getElementById("irBtn");
@@ -387,20 +389,28 @@ grid.material.transparent = true; grid.material.opacity = 0.22;
 grid.position.set(75, 0.02, 0);
 scene.add(grid);
 /* pasillo peatonal */
-const senda = plano(150, 4.6, 0xC3CEB9, 0.85); senda.position.set(75, 0.025, 0); scene.add(senda);
+const senda = plano(260, 4.6, 0xC3CEB9, 0.85); senda.position.set(128, 0.025, 0); scene.add(senda);
 [-2.4, 2.4].forEach(z => {
-  const l = new THREE.Mesh(new THREE.BoxGeometry(150, 0.04, 0.16), new THREE.MeshBasicMaterial({ color: 0xF2B705 }));
-  l.position.set(75, 0.04, z); scene.add(l);
+  const l = new THREE.Mesh(new THREE.BoxGeometry(260, 0.04, 0.16), new THREE.MeshBasicMaterial({ color: 0xF2B705 }));
+  l.position.set(128, 0.04, z); scene.add(l);
 });
+/* alfombra del mundo oficina */
+const alfombra = plano(138, 13, 0x9FB2C8, 0.55); alfombra.position.set(190, 0.02, 0); scene.add(alfombra);
 /* muro trasero con ventanas */
-const muro = caja(160, 7, 0.6, 0xD8DEE2, false); muro.position.set(75, 3.5, -6.6); muro.receiveShadow = true; scene.add(muro);
-for (let x = 6; x < 150; x += 12) {
+const muro = caja(285, 7, 0.6, 0xD8DEE2, false); muro.position.set(127, 3.5, -6.6); muro.receiveShadow = true; scene.add(muro);
+for (let x = 6; x < 252; x += 12) {
   const v = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.6), new THREE.MeshBasicMaterial({ color: 0xCBE8F5 }));
-  v.position.set(x, 4.4, -6.28); scene.add(v);
+  v.position.set(x, 4.4, -6.28), scene.add(v);
 }
+/* puerta divisoria entre mundos */
+const marco = caja(0.8, 5, 1.2, 0x546E7A, false); marco.position.set(120, 2.5, -5.9); scene.add(marco);
+const marcoSign = letrero("→ OFICINAS", 4.2, 1.1, "#0A5CA8", "#fff", 54);
+marcoSign.position.set(120, 4.6, -5.2); scene.add(marcoSign);
 /* letreros de zona */
 [["VESTIER", 7, 0x0A5CA8], ["BODEGA", 30, 0x0A5CA8], ["MONTACARGAS", 57, 0x8A6200],
- ["ZONA DE RUIDO · 95 dB", 86, 0x8A6200], ["RIESGO ELÉCTRICO", 106, 0xB62233], ["SALIDA →", 133, 0x00795C]
+ ["ZONA DE RUIDO · 95 dB", 86, 0x8A6200], ["RIESGO ELÉCTRICO", 106, 0xB62233],
+ ["OFICINAS", 132, 0x0A5CA8], ["CAFETERÍA", 170, 0x8A6200], ["ARCHIVO", 200, 0x0A5CA8],
+ ["CIERRE DE JORNADA", 226, 0x00795C], ["SALIDA →", 244, 0x00795C]
 ].forEach(([t, x, c]) => {
   const l = letrero(t, 7.5, 1.6, "#" + c.toString(16).padStart(6, "0"), "#fff", 52);
   l.position.set(x, 2.6, -6.27); scene.add(l);
@@ -500,21 +510,82 @@ const cono = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.3, 14), mat(0xF57F17))
 cono.position.set(105.6, 0.65, 0); cono.castShadow = true; cono.visible = false; scene.add(cono);
 let tecnico = null, tecnicoLlega = 0;
 
-/* --- Evacuación --- */
+/* ================= MUNDO OFICINA (x 122–256) ================= */
+
+/* --- Cables sueltos cruzando el pasillo (x≈132) --- */
+const cablesOf = new THREE.Group();
+[-0.35, 0, 0.4].forEach((dx, i) => {
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 11, 8), mat(i === 1 ? 0x455A64 : 0x263238));
+  c.rotation.x = Math.PI / 2; c.rotation.z = 0.05 * (i - 1);
+  c.position.set(132 + dx, 0.06, 0); cablesOf.add(c);
+});
+scene.add(cablesOf);
+const cablesZonaOf = plano(3, 11, 0xB62233, 0.3); cablesZonaOf.position.set(132, 0.035, 0); scene.add(cablesZonaOf);
+const canaleta = caja(0.7, 0.12, 11, 0x78909C); canaleta.position.set(132, 0.06, 0); canaleta.visible = false; scene.add(canaleta);
+
+/* --- Carrito de correspondencia patrullando (x 140–160) --- */
+const carrito = { x: 142, dir: 1, vel: 2.2, z: 0 };
+const carritoG = new THREE.Group(); scene.add(carritoG);
+(function () {
+  const base = caja(1.5, 0.9, 1.0, 0x78909C); base.position.y = 0.75; carritoG.add(base);
+  const bandeja = caja(1.4, 0.1, 0.9, 0xB0BEC5); bandeja.position.y = 1.25; carritoG.add(bandeja);
+  const papeles = caja(1.0, 0.34, 0.7, 0xF5F0DC); papeles.position.y = 1.45; carritoG.add(papeles);
+  const asa = caja(0.08, 0.7, 1.0, 0x455A64); asa.position.set(-0.75, 1.35, 0); carritoG.add(asa);
+  [[-0.6, 0.42], [0.6, 0.42], [-0.6, -0.42], [0.6, -0.42]].forEach(([wx, wz]) => {
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 10), mat(0x212121));
+    r.rotation.x = Math.PI / 2; r.position.set(wx, 0.16, wz); carritoG.add(r);
+  });
+})();
+const carritoZona = plano(4, 3, 0xB62233, 0.25); scene.add(carritoZona);
+
+/* --- Cafetería con derrame de café (x≈172) --- */
+const barra = caja(4, 1.1, 1.2, 0x8D6E63); barra.position.set(172, 0.55, -5); scene.add(barra);
+const cafetera = caja(0.6, 0.7, 0.5, 0x263238); cafetera.position.set(171, 1.45, -5); scene.add(cafetera);
+const tazas = caja(1.2, 0.25, 0.4, 0xF5F0DC); tazas.position.set(173, 1.25, -5); scene.add(tazas);
+const derrame = new THREE.Mesh(new THREE.CircleGeometry(1.15, 20),
+  new THREE.MeshBasicMaterial({ color: 0x6D4C41, transparent: true, opacity: 0.8, depthWrite: false }));
+derrame.rotation.x = -Math.PI / 2; derrame.position.set(172, 0.045, 0.5); scene.add(derrame);
+const derrameZona = plano(3.4, 3.4, 0xB62233, 0.3); derrameZona.position.set(172, 0.03, 0.5); scene.add(derrameZona);
+const conoDerrame = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.1, 14), mat(0xF2B705));
+conoDerrame.position.set(172, 0.55, 0.5); conoDerrame.castShadow = true; conoDerrame.visible = false; scene.add(conoDerrame);
+
+/* --- Escritorios, archivo y plantas --- */
+[178, 190, 212].forEach(x => {
+  const mesa = caja(2.6, 0.1, 1.2, 0xA1887F); mesa.position.set(x, 1.05, -4.9); scene.add(mesa);
+  [[-1.1], [1.1]].forEach(([dx]) => {
+    const pata = caja(0.12, 1.0, 1.0, 0x6D4C41); pata.position.set(x + dx, 0.5, -4.9); scene.add(pata);
+  });
+  const pantalla = caja(1.0, 0.65, 0.08, 0x263238); pantalla.position.set(x, 1.65, -5.1); scene.add(pantalla);
+  const silla = caja(0.7, 0.12, 0.7, 0x37474F); silla.position.set(x, 0.75, -3.9); scene.add(silla);
+  const espaldar = caja(0.7, 0.9, 0.12, 0x37474F); espaldar.position.set(x, 1.25, -4.25); scene.add(espaldar);
+});
+[199, 201, 203].forEach((x, i) => {
+  const arch = caja(1.4, 2.4 - i * 0.3, 0.9, 0x78909C); arch.position.set(x, (2.4 - i * 0.3) / 2, -5.2); scene.add(arch);
+});
+const cajasArchivo = caja(1.0, 0.8, 0.8, 0xBC8F5E); cajasArchivo.position.set(200, 0.4, -3.4); scene.add(cajasArchivo);
+const carroArchivo = caja(1.1, 0.5, 0.7, 0x00795C); carroArchivo.position.set(201.4, 0.35, -3.4); scene.add(carroArchivo);
+[126, 165, 220, 236].forEach(x => {
+  const pote = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 0.5, 10), mat(0xA1887F));
+  pote.position.set(x, 0.25, -5.4); pote.castShadow = true; scene.add(pote);
+  const hojas = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), mat(0x2E7D52));
+  hojas.position.set(x, 0.95, -5.4); hojas.castShadow = true; scene.add(hojas);
+});
+
+/* --- Evacuación (final del turno, x 232–256) --- */
 const alarma = new THREE.Mesh(new THREE.SphereGeometry(0.4, 14, 10),
   new THREE.MeshBasicMaterial({ color: 0xB62233 }));
-alarma.position.set(118, 6.2, -6.1); scene.add(alarma);
+alarma.position.set(233, 6.2, -6.1); scene.add(alarma);
 const flechas = [];
-for (let x = 120; x <= 138; x += 4.5) {
+for (let x = 235; x <= 247; x += 4) {
   const f = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.5, 4), new THREE.MeshBasicMaterial({ color: 0x00A87E }));
   f.rotation.z = -Math.PI / 2; f.rotation.y = Math.PI / 4;
   f.position.set(x, 0.3, 0); f.visible = false; scene.add(f); flechas.push(f);
 }
-const puerta = caja(2.6, 3.6, 0.4, 0x8D6E63); puerta.position.set(140, 1.8, -6.1); scene.add(puerta);
-const salidaSign = letrero("SALIDA", 2.6, 0.9, "#00795C", "#fff", 62); salidaSign.position.set(140, 4.2, -6.05); scene.add(salidaSign);
+const puerta = caja(2.6, 3.6, 0.4, 0x8D6E63); puerta.position.set(248, 1.8, -6.1); scene.add(puerta);
+const salidaSign = letrero("SALIDA", 2.6, 0.9, "#00795C", "#fff", 62); salidaSign.position.set(248, 4.2, -6.05); scene.add(salidaSign);
 const encuentro = letrero("PUNTO DE ENCUENTRO", 4.6, 1.3, "#00795C", "#fff", 42);
-encuentro.position.set(145, 1.9, -4.5); encuentro.rotation.y = -0.4; scene.add(encuentro);
-const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(145, 1.1, -4.7); scene.add(encPoste);
+encuentro.position.set(252.5, 1.9, -4.5); encuentro.rotation.y = -0.4; scene.add(encuentro);
+const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1.1, -4.7); scene.add(encPoste);
 
 /* ---------- Personaje humano estilizado (low-poly realista) ---------- */
 function humano(op) {
@@ -669,6 +740,33 @@ const INTER = [
       S.flags.electrico = true; S.reportes++; S.puntos += 20; sndOk();
       cono.visible = true; tecnicoLlega = S.t + 1.4;
       toast("Zona señalizada y reporte enviado: viene el personal autorizado. <strong>+20</strong>");
+    } },
+  { id: "cables", x: 128, z: -3.6, activo: () => S.epp && !S.flags.cables, usar: () => {
+      S.flags.cables = true; S.reportes++; S.puntos += 20; sndOk();
+      cablesOf.visible = false; canaleta.visible = true;
+      toast("Cables en canaleta y condición reportada. El pasillo quedó libre. <strong>+20</strong>");
+    } },
+  { id: "derrame", x: 168, z: -3.6, activo: () => S.epp && !S.flags.derrame, usar: () => {
+      S.flags.derrame = true; S.reportes++; S.puntos += 20; sndOk();
+      conoDerrame.visible = true; derrame.material.opacity = 0.25;
+      toast("Derrame señalizado y limpieza en camino. Nadie se resbala hoy. <strong>+20</strong>");
+    } },
+  { id: "pausa", x: 185, z: -3.6, activo: () => S.epp && !S.flags.pausa, usar: () => {
+      S.flags.pausa = true; S.puntos += 15; S.bien = clamp(S.bien + 25, 0, 100); sndPick();
+      toast("🤸 Pausa activa: cuello, espalda y hombros. Mira cómo sube tu bienestar. <strong>+15</strong>");
+    } },
+  { id: "archivo", x: 200, z: -3.6, activo: () => S.epp && !S.flags.archivo, usar: () => {
+      S.flags.archivo = true; S.puntos += 15; sndOk();
+      cajasArchivo.position.set(201.4, 0.95, -3.4);
+      toast("Cajas al carro: la espalda carga rodando, no doblada. <strong>+15</strong>");
+    } },
+  { id: "ergo", x: 215, z: -3.6, activo: () => S.epp && !S.flags.ergo, usar: () => {
+      S.flags.ergo = true; S.puntos += 15; sndOk();
+      toast("💺 Silla, pantalla y teclado ajustados: tu cuerpo trabaja contigo. <strong>+15</strong>");
+    } },
+  { id: "cierre", x: 228, z: -3.6, activo: () => S.epp && !S.flags.cierre, usar: () => {
+      S.flags.cierre = true; S.puntos += 20; sndOk();
+      toast("🔌 Equipos apagados, cajones cerrados, puesto ordenado. Así se termina un turno. <strong>+20</strong>");
     } }
 ];
 INTER.forEach(it => {
@@ -714,8 +812,17 @@ function objetivoActual() {
   if (!S.oidos && S.x < 98) return { x: 73, z: -3.6, txt: "Toma los protectores auditivos 🎧" };
   if (S.x < 99) return { x: 100, z: 0, txt: "Cruza la sala de compresores" };
   if (!S.flags.electrico && S.x < 107) return { x: 103, z: -3.6, txt: "Señaliza y reporta el cable eléctrico" };
-  if (!S.flags.alarma) return { x: 117, z: 0, txt: "Avanza hacia el final del turno →" };
-  return { x: 143.5, z: 0, txt: "🚨 ¡Evacúa! Ve al punto de encuentro" };
+  if (S.x < 121) return { x: 122.5, z: 0, txt: "Cruza la puerta al mundo oficina 🏢" };
+  if (!S.flags.cables && S.x < 131) return { x: 128, z: -3.6, txt: "Organiza y reporta los cables del pasillo" };
+  if (S.x < 136) return { x: 137, z: 3.6, txt: "Hazte a un lado: deja libre el carril del carrito" };
+  if (S.x < 163) return { x: 164, z: 3.6, txt: "Cede el carril: pasa por el lado del carrito 📬" };
+  if (!S.flags.derrame && S.x < 171) return { x: 168, z: -3.6, txt: "Señaliza el derrame de café ☕" };
+  if (!S.flags.pausa) return { x: 185, z: -3.6, txt: "Haz tu pausa activa 🤸" };
+  if (!S.flags.archivo) return { x: 200, z: -3.6, txt: "Mueve el archivo con el carro 📦" };
+  if (!S.flags.ergo) return { x: 215, z: -3.6, txt: "Ajusta tu puesto de trabajo 💺" };
+  if (!S.flags.cierre) return { x: 228, z: -3.6, txt: "Cierra tu jornada: apaga y ordena 🔌" };
+  if (!S.flags.alarma) return { x: 233, z: 0, txt: "Avanza hacia la salida →" };
+  return { x: 252, z: 0, txt: "🚨 ¡Evacúa! Ve al punto de encuentro" };
 }
 
 /* ---------- HUD / toast / paneles ---------- */
@@ -760,7 +867,10 @@ function flashRojo() {
 const LECCIONES = {
   caida: { t: "Golpe por caída de objeto", exp: "Pisaste el círculo rojo justo cuando caía la caja. Ese círculo es tu aviso: rodéalo o espera a que caiga.", regla: "Bajo carga suspendida, nunca te pares." },
   monta: { t: "Casi-accidente con montacargas", exp: "El operador con carga tiene puntos ciegos enormes. Activa el contacto visual 👀: se detiene con un ✅ y cruzas seguro.", regla: "Cruce peatonal + mirada al operador." },
-  electrico: { t: "Descarga eléctrica evitada en la simulación", exp: "Nunca te acerques a un cable energizado. Ve al punto de reporte 🚧 para que venga personal autorizado.", regla: "Cable suelto: señaliza, aléjate, reporta." }
+  electrico: { t: "Descarga eléctrica evitada en la simulación", exp: "Nunca te acerques a un cable energizado. Ve al punto de reporte 🚧 para que venga personal autorizado.", regla: "Cable suelto: señaliza, aléjate, reporta." },
+  cables: { t: "Tropiezo con cables sueltos", exp: "Los cables atravesados son la caída más común en oficinas. Organízalos con canaleta y repórtalos en el punto ⚡ antes de pasar.", regla: "Piso libre, oficina segura." },
+  carrito: { t: "Choque en el pasillo", exp: "En pasillos y esquinas se camina atento y se cede el paso. Dale espacio al carrito: espera a que pase o rodéalo.", regla: "Camina atento y cede el paso." },
+  derrame: { t: "Resbalón por piso húmedo", exp: "Un derrame sin señalizar es una caída esperando turno. Señalízalo y límpialo (o repórtalo) en el punto ⚡ antes de pasar.", regla: "Piso húmedo: señaliza antes de pasar." }
 };
 function leccion(id) {
   const l = LECCIONES[id];
@@ -769,6 +879,7 @@ function leccion(id) {
   S.bien = clamp(S.bien - 20, 0, 100);
   if (id === "caida") S.limpio.bodega = false;
   if (id === "monta") S.limpio.monta = false;
+  if (id === "carrito") S.limpio.carrito = false;
   stage.classList.add("frozen", "shake");
   setTimeout(() => stage.classList.remove("shake"), 550);
   flashRojo(); sndAlerta(); setTimeout(sndBad, 250);
@@ -858,7 +969,7 @@ renderer.domElement.addEventListener("pointerdown", e => {
   ray.setFromCamera({ x: nx, y: ny }, camera);
   if (ray.ray.intersectPlane(planoPiso, vTmp)) {
     if (autoPilot) { autoPilot = false; setIrBtn(); }
-    target = { x: clamp(vTmp.x, 2, 148), z: clamp(vTmp.z, -5, 5) };
+    target = { x: clamp(vTmp.x, 2, 255), z: clamp(vTmp.z, -5, 5) };
     S.flags.avisos.primerTap = true;
     tapRing.position.set(target.x, 0.05, target.z);
     tapRing.visible = true;
@@ -903,9 +1014,12 @@ function update(dt) {
       });
       if (monta.pausa <= 0 && S.x > 43 && S.x < 71 && Math.abs(lx - monta.x) < 4.8 && Math.abs(lz) < 2.6) esperando = true;
       if (!S.flags.electrico && Math.abs(lx - 108) < 2.8) esperando = true;
+      if (!S.flags.cables && Math.abs(lx - 132) < 2.4) esperando = true;
+      if (S.x > 136 && S.x < 164 && Math.abs(lx - carrito.x) < 3.4 && Math.abs(lz - carrito.z) < 2.2) esperando = true;
+      if (!S.flags.derrame && Math.hypot(lx - 172, lz - 0.5) < 2.4) esperando = true;
     }
     if (!esperando) {
-      S.x = clamp(S.x + vx * 4.6 * dt, 2, 148);
+      S.x = clamp(S.x + vx * 4.6 * dt, 2, 255);
       S.z = clamp(S.z + vz * 4.6 * dt, -5, 5);
       S.yaw = Math.atan2(vx, vz);
       S.animT += dt * 10;
@@ -931,7 +1045,8 @@ function update(dt) {
   }
 
   /* checkpoints monotónicos */
-  [[14, 15], [42, 43], [69, 70.5], [99, 100], [110, 111.5]].forEach(([lim, cp]) => {
+  [[14, 15], [42, 43], [69, 70.5], [99, 100], [110, 111.5],
+   [121, 122.5], [135, 136], [163, 164.5], [175, 176.5], [230, 231]].forEach(([lim, cp]) => {
     if (S.x > lim && S.checkpoint.x < cp) S.checkpoint = { x: cp, z: 0 };
   });
 
@@ -940,6 +1055,11 @@ function update(dt) {
   if (S.x > 42 && S.x < 46) avisoUnaVez("monta", "Montacargas en circulación. Pasa por el punto <strong>👀 contacto visual</strong> y cruza con el ✅.");
   if (S.x > 69 && S.x < 74) avisoUnaVez("ruido", "Adelante hay 95 dB. Toma tus <strong>protectores 🎧</strong> de la caja naranja.");
   if (S.x > 99 && S.x < 103) avisoUnaVez("electrico", "¡Cable energizado cruza el piso! No te acerques: usa el punto de <strong>reporte</strong>.");
+  if (S.x > 119 && S.x < 124) avisoUnaVez("oficina", "🏢 <strong>Bienvenido al mundo oficina.</strong> Aquí los riesgos son más silenciosos: cables, pisos húmedos, malas posturas…");
+  if (S.x > 124 && S.x < 127) avisoUnaVez("cablesAv", "Cables atravesados en el pasillo: organízalos en el punto ⚡ antes de pasar.");
+  if (S.x > 137 && S.x < 141) avisoUnaVez("carritoAv", "📬 Pasillo concurrido: dale espacio al carrito de correspondencia.");
+  if (S.x > 164 && S.x < 167) avisoUnaVez("derrameAv", "☕ Derrame de café adelante: señalízalo en el punto ⚡ antes de pasar.");
+  if (S.x > 177 && S.x < 181) avisoUnaVez("pausaAv", "Llevas medio turno sin parar: una <strong>pausa activa 🤸</strong> recupera tu bienestar.");
 
   /* cajas que caen */
   CAJAS.forEach(c => {
@@ -1021,7 +1141,30 @@ function update(dt) {
     }
   }
 
+  /* --- mundo oficina --- */
+  /* cables sueltos */
+  if (S.inv <= 0 && !S.flags.cables && Math.abs(S.x - 132) < 1.3) leccion("cables");
+  cablesZonaOf.material.color.set(S.flags.cables ? 0x00795C : 0xB62233);
+  cablesZonaOf.material.opacity = S.flags.cables ? 0.3 : 0.2 + Math.abs(Math.sin(S.t * 5)) * 0.15;
+  /* carrito de correspondencia */
+  carrito.x += carrito.dir * carrito.vel * dt;
+  if (carrito.x > 160) { carrito.x = 160; carrito.dir = -1; }
+  if (carrito.x < 140) { carrito.x = 140; carrito.dir = 1; }
+  if (S.inv <= 0 && S.x > 136 && S.x < 164 && Math.abs(S.x - carrito.x) < 1.7 && Math.abs(S.z - carrito.z) < 1.3) leccion("carrito");
+  carritoG.position.set(carrito.x, 0, carrito.z);
+  carritoG.rotation.y = carrito.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+  carritoZona.position.set(carrito.x, 0.03, carrito.z);
+  carritoZona.material.opacity = 0.18 + Math.abs(Math.sin(S.t * 5)) * 0.12;
+  /* derrame de café */
+  if (S.inv <= 0 && !S.flags.derrame && Math.hypot(S.x - 172, S.z - 0.5) < 1.35) leccion("derrame");
+  derrameZona.material.color.set(S.flags.derrame ? 0x00795C : 0xB62233);
+  derrameZona.material.opacity = S.flags.derrame ? 0.25 : 0.2 + Math.abs(Math.sin(S.t * 5)) * 0.15;
+
   /* premios de zona limpia */
+  if (S.x > 164 && !S.flags.avisos.pCarrito) {
+    S.flags.avisos.pCarrito = true;
+    if (S.limpio.carrito) { S.puntos += 15; sndOk(); toast("Pasillo cruzado sin un solo choque. <strong>+15</strong>"); }
+  }
   if (S.x > 42 && !S.flags.avisos.pBodega) {
     S.flags.avisos.pBodega = true;
     if (S.limpio.bodega) { S.puntos += 15; sndOk(); toast("Cruzaste la bodega sin un solo golpe. <strong>+15</strong>"); }
@@ -1035,15 +1178,15 @@ function update(dt) {
     if (S.oidos) { S.puntos += 15; sndOk(); toast("Zona de ruido cruzada con protección. <strong>+15</strong>"); }
   }
 
-  /* evacuación */
-  if (S.x > 116 && !S.flags.alarma) {
+  /* evacuación (final del turno completo) */
+  if (S.x > 232 && S.flags.cierre && !S.flags.alarma) {
     S.flags.alarma = true; S.flags.evacT0 = S.t;
     flechas.forEach(f => f.visible = true);
     toast("🚨 ¡Alarma de evacuación! Sigue las flechas verdes hasta el <strong>punto de encuentro</strong>. Paso firme, sin correr.", 5000);
     sndAlerta();
   }
   if (S.flags.alarma && !S.fin && Math.floor(S.t * 1.2) !== Math.floor((S.t - dt) * 1.2)) sndAlerta();
-  if (S.flags.alarma && S.x > 141 && !S.fin) terminar();
+  if (S.flags.alarma && S.x > 250.5 && !S.fin) terminar();
 
   document.getElementById("objTxt").textContent = objetivoActual().txt;
   hud();
@@ -1235,8 +1378,8 @@ function loop(t) {
 function intro() {
   panel(
     '<div style="text-align:center;font-size:44px">👷</div>' +
-    '<h2 style="text-align:center">Turno Seguro 3D · Mundo Operativo</h2>' +
-    '<p style="font-size:14.5px;text-align:center;margin:4px 0 10px">Recorre la planta en 3D, esquiva los riesgos y llega al punto de encuentro. Tu objetivo siempre está arriba 🎯 y la flecha amarilla te guía.</p>' +
+    '<h2 style="text-align:center">Turno Seguro 3D · Planta + Oficina</h2>' +
+    '<p style="font-size:14.5px;text-align:center;margin:4px 0 10px">Un turno completo en 3D: primero la planta (EPP, cargas, montacargas, ruido, riesgo eléctrico) y luego la oficina (cables, pisos húmedos, pausas activas, ergonomía) hasta evacuar al punto de encuentro. Tu objetivo siempre está arriba 🎯.</p>' +
     '<div class="ctl-demo">' +
     '<div class="k" style="border-color:var(--green)">👣<small><strong>Pulsa el botón verde de abajo</strong><br>y el personaje camina solo,<br>esperando ante cada peligro ✋</small></div>' +
     '<div class="k">👆<small>o toca el piso<br>a donde quieras ir</small></div>' +
@@ -1244,10 +1387,8 @@ function intro() {
     '<p style="font-size:13px;text-align:center;color:var(--muted);margin:2px 0 8px">Sigue las huellas amarillas. En los puntos verdes ⚡ el personaje actúa automáticamente. Rojo en el piso = peligro; verde = seguro.</p>' +
     '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
     '<button class="btn" id="btnGo">▶ Iniciar el turno</button>' +
-    '<button class="btn sec" id="btn2d">Versión 2D ligera</button>' +
     '<button class="btn sec" id="btnVolver">Volver al menú</button>');
   document.getElementById("btnGo").onclick = empezar;
-  document.getElementById("btn2d").onclick = () => location.href = "aventura.html";
   document.getElementById("btnVolver").onclick = () => location.href = "index.html";
 }
 function empezar() {
