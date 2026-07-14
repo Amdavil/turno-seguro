@@ -138,6 +138,23 @@
     font-weight: 800; font-size: 15px; text-align: center;
   }
   .ctl-demo .k small { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+  #irBtn {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 11; border: none; cursor: pointer; font-family: inherit;
+    background: linear-gradient(180deg, var(--green-hi), var(--green));
+    color: #fff; font-weight: 800; font-size: 17px; padding: 14px 30px;
+    border-radius: 999px; text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    box-shadow: 0 5px 0 var(--green-deep), 0 12px 28px rgba(0,0,0,0.4);
+    animation: latido 1.6s ease-in-out infinite;
+  }
+  #irBtn:active { transform: translate(-50%, 4px); box-shadow: 0 0 0 var(--green-deep); }
+  #irBtn.activo {
+    background: linear-gradient(180deg, #FFCB2E, var(--yellow));
+    color: var(--ink); text-shadow: none; animation: none;
+    box-shadow: 0 5px 0 #8A6200, 0 12px 28px rgba(0,0,0,0.4);
+  }
+  @keyframes latido { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.06); } }
+  #hud button.apagado { opacity: 0.35; }
   .flash {
     position: absolute; inset: 0; pointer-events: none; z-index: 15;
     background: radial-gradient(ellipse at center, rgba(182,34,51,0) 35%, rgba(182,34,51,0.45) 100%);
@@ -159,12 +176,14 @@
       <div class="lbl" id="hudBienLbl">Bienestar 100%</div>
       <div class="bar" id="hudBar"><div style="width:100%"></div></div>
     </div>
+    <button id="musBtn" aria-label="Música">🎵</button>
     <button id="muteBtn" aria-label="Silenciar">🔊</button>
     <button onclick="location.href='index.html'" aria-label="Salir">🏠</button>
   </div>
   <div id="objetivo"><span class="chip">🎯</span><span id="objTxt">…</span></div>
   <div id="toast"></div>
   <div id="ruidoFx"></div>
+  <button id="irBtn">👣 Ir al objetivo</button>
   <div id="overlay"></div>
 </div>
 
@@ -194,11 +213,24 @@ const S = {
   limpio: { bodega: true, monta: true, ruido: true }
 };
 const MAX = 175;
-let target = null; /* {x,z} destino del toque */
+let target = null;     /* {x,z} destino del toque */
+let autoPilot = false; /* guía automática hacia el objetivo */
+const irBtn = document.getElementById("irBtn");
+function setIrBtn() {
+  irBtn.textContent = autoPilot ? "⏸ Pausar guía" : "👣 Ir al objetivo";
+  irBtn.classList.toggle("activo", autoPilot);
+}
+irBtn.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  if (S.pausado || S.fin) return;
+  autoPilot = !autoPilot;
+  setIrBtn();
+  if (autoPilot) sndPick();
+});
 
-/* ---------- Audio ---------- */
-let actx = null, muted = false;
-function tone(seq) {
+/* ---------- Audio: efectos, música y ambiente ---------- */
+let actx = null, muted = false, musicaOn = true, musTimer = null, ambInicio = false;
+function tone(seq, vol) {
   if (muted) return;
   try {
     if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -206,7 +238,7 @@ function tone(seq) {
     seq.forEach(p => {
       const o = actx.createOscillator(), g = actx.createGain();
       o.type = p.w || "sine"; o.frequency.value = p.f;
-      g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + p.d);
+      g.gain.setValueAtTime(vol || 0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + p.d);
       o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + p.d); t += p.d * 0.85;
     });
   } catch (e) {}
@@ -216,8 +248,60 @@ const sndBad = () => tone([{f:330,d:0.15},{f:196,d:0.3}]);
 const sndAlerta = () => tone([{f:880,d:0.1,w:"square"},{f:880,d:0.1,w:"square"}]);
 const sndPick = () => tone([{f:660,d:0.08},{f:880,d:0.1}]);
 const sndBeep = () => tone([{f:740,d:0.09,w:"square"}]);
+const sndPaso = () => tone([{f:150,d:0.05,w:"triangle"}], 0.035);
+const sndThud = () => tone([{f:75,d:0.22,w:"sine"}], 0.14);
+const sndFanfarria = () => tone([{f:523,d:0.14},{f:659,d:0.14},{f:784,d:0.14},{f:1047,d:0.4}], 0.12);
+function nota(f, t0, dur, vol, tipo) {
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = tipo; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(vol, t0 + 0.09);
+  g.gain.setValueAtTime(vol, t0 + dur * 0.65);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function iniciarAudioFondo() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    /* zumbido ambiente de fábrica (una sola vez) */
+    if (!ambInicio) {
+      ambInicio = true;
+      const buf = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = actx.createBufferSource(); src.buffer = buf; src.loop = true;
+      const fil = actx.createBiquadFilter(); fil.type = "lowpass"; fil.frequency.value = 170;
+      const g = actx.createGain(); g.gain.value = 0.016;
+      src.connect(fil); fil.connect(g); g.connect(actx.destination); src.start();
+      const hum = actx.createOscillator(); hum.frequency.value = 55;
+      const hg = actx.createGain(); hg.gain.value = 0.011;
+      hum.connect(hg); hg.connect(actx.destination); hum.start();
+    }
+    /* música de fondo: progresión C–Am–F–G suave */
+    if (musTimer) return;
+    let barra = 0;
+    const AC = [[261.6, 329.6, 392.0], [220.0, 261.6, 329.6], [174.6, 220.0, 261.6], [196.0, 246.9, 293.7]];
+    const compas = () => {
+      if (!musicaOn || muted) { barra++; return; }
+      try {
+        const t0 = actx.currentTime + 0.06, ch = AC[barra % 4];
+        ch.forEach(f => nota(f, t0, 1.9, 0.02, "triangle"));
+        nota(ch[0] / 2, t0, 1.85, 0.05, "sine");
+        for (let i = 0; i < 4; i++) nota(ch[(i * 2) % 3] * 2, t0 + i * 0.5, 0.26, 0.015, "sine");
+        barra++;
+      } catch (e) {}
+    };
+    compas();
+    musTimer = setInterval(compas, 2000);
+  } catch (e) {}
+}
 document.getElementById("muteBtn").onclick = function () {
   muted = !muted; this.textContent = muted ? "🔇" : "🔊";
+};
+document.getElementById("musBtn").onclick = function () {
+  musicaOn = !musicaOn; this.classList.toggle("apagado", !musicaOn);
 };
 
 /* ---------- Three.js: escena base ---------- */
@@ -610,6 +694,16 @@ objFlecha.rotation.x = Math.PI; scene.add(objFlecha);
 const tapRing = anillo(0.4, 0.7, 0x0A5CA8, 0.9); tapRing.visible = false; scene.add(tapRing);
 /* mano tutorial */
 const mano = spriteEmoji("👆", 1.6); scene.add(mano);
+/* camino de huellas hacia el objetivo (siempre sabes por dónde ir) */
+const MIGAS = [];
+for (let i = 0; i < 9; i++) {
+  const m = new THREE.Mesh(new THREE.CircleGeometry(0.17, 12),
+    new THREE.MeshBasicMaterial({ color: 0xFFD54F, transparent: true, opacity: 0.85, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.y = 0.055; m.visible = false;
+  scene.add(m); MIGAS.push(m);
+}
+/* señal de espera ante peligro (guía automática) */
+const esperaSp = spriteEmoji("✋", 1.4); esperaSp.visible = false; scene.add(esperaSp);
 
 /* ---------- Objetivos ---------- */
 function objetivoActual() {
@@ -621,7 +715,7 @@ function objetivoActual() {
   if (S.x < 99) return { x: 100, z: 0, txt: "Cruza la sala de compresores" };
   if (!S.flags.electrico && S.x < 107) return { x: 103, z: -3.6, txt: "Señaliza y reporta el cable eléctrico" };
   if (!S.flags.alarma) return { x: 117, z: 0, txt: "Avanza hacia el final del turno →" };
-  return { x: 141, z: 0, txt: "🚨 ¡Evacúa! Ve al punto de encuentro" };
+  return { x: 143.5, z: 0, txt: "🚨 ¡Evacúa! Ve al punto de encuentro" };
 }
 
 /* ---------- HUD / toast / paneles ---------- */
@@ -763,6 +857,7 @@ renderer.domElement.addEventListener("pointerdown", e => {
   const ny = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera({ x: nx, y: ny }, camera);
   if (ray.ray.intersectPlane(planoPiso, vTmp)) {
+    if (autoPilot) { autoPilot = false; setIrBtn(); }
     target = { x: clamp(vTmp.x, 2, 148), z: clamp(vTmp.z, -5, 5) };
     S.flags.avisos.primerTap = true;
     tapRing.position.set(target.x, 0.05, target.z);
@@ -777,27 +872,49 @@ function update(dt) {
   if (S.inv > 0) S.inv -= dt;
 
   /* movimiento */
+  if (autoPilot) {
+    const o = objetivoActual();
+    target = { x: o.x, z: o.z };
+    tapRing.visible = false;
+  }
   let vx = 0, vz = 0;
   if (keys["arrowleft"] || keys["a"]) vx -= 1;
   if (keys["arrowright"] || keys["d"]) vx += 1;
   if (keys["arrowup"] || keys["w"]) vz -= 1;
   if (keys["arrowdown"] || keys["s"]) vz += 1;
-  if (vx || vz) { target = null; tapRing.visible = false; }
-  else if (target) {
+  if (vx || vz) {
+    target = null; tapRing.visible = false;
+    if (autoPilot) { autoPilot = false; setIrBtn(); }
+  } else if (target) {
     const dx = target.x - S.x, dz = target.z - S.z;
     const d = Math.hypot(dx, dz);
     if (d > 0.25) { vx = dx / d; vz = dz / d; }
     else { target = null; tapRing.visible = false; }
   }
   const mag = Math.hypot(vx, vz);
-  S.andando = mag > 0;
+  let esperando = false;
   if (mag > 0) {
     vx /= mag; vz /= mag;
-    S.x = clamp(S.x + vx * 4.6 * dt, 2, 148);
-    S.z = clamp(S.z + vz * 4.6 * dt, -5, 5);
-    S.yaw = Math.atan2(vx, vz);
-    S.animT += dt * 10;
+    /* la guía automática se detiene ante peligros activos y espera el paso seguro */
+    if (autoPilot) {
+      const lx = S.x + vx * 2.2, lz = S.z + vz * 2.2;
+      CAJAS.forEach(c => {
+        if ((c.estado === "aviso" || c.estado === "cae") && Math.hypot(lx - c.x, lz - c.z) < 2.3) esperando = true;
+      });
+      if (monta.pausa <= 0 && S.x > 43 && S.x < 71 && Math.abs(lx - monta.x) < 4.8 && Math.abs(lz) < 2.6) esperando = true;
+      if (!S.flags.electrico && Math.abs(lx - 108) < 2.8) esperando = true;
+    }
+    if (!esperando) {
+      S.x = clamp(S.x + vx * 4.6 * dt, 2, 148);
+      S.z = clamp(S.z + vz * 4.6 * dt, -5, 5);
+      S.yaw = Math.atan2(vx, vz);
+      S.animT += dt * 10;
+      S.pasoT = (S.pasoT || 0) + dt;
+      if (S.pasoT > 0.34) { S.pasoT = 0; sndPaso(); }
+    }
   }
+  S.andando = mag > 0 && !esperando;
+  S.esperando = esperando;
   /* barrera EPP */
   if (!S.epp && S.x > 12) {
     S.x = 12;
@@ -832,6 +949,7 @@ function update(dt) {
       c.t = 0;
       c.estado = c.estado === "espera" ? "aviso" : c.estado === "aviso" ? "cae" : c.estado === "cae" ? "suelo" : "espera";
       if (c.estado === "cae") c.y = 9;
+      if (c.estado === "suelo" && Math.abs(S.x - c.x) < 25) sndThud();
     }
     c.ring.visible = c.estado === "aviso" || c.estado === "cae";
     if (c.ring.visible) {
@@ -1003,6 +1121,24 @@ function animarVisual(dt) {
   objFlecha.position.set(obj.x, 2.6 + Math.sin(S.t * 4) * 0.25, obj.z);
   mano.visible = !S.flags.avisos.primerTap && !S.pausado;
   mano.position.set(obj.x, 3.8 + Math.sin(S.t * 4) * 0.3, obj.z);
+  /* huellas amarillas que marchan hacia el objetivo */
+  const dxo = obj.x - S.x, dzo = obj.z - S.z, dObj = Math.hypot(dxo, dzo);
+  if (dObj > 2.6 && !S.pausado) {
+    const ux = dxo / dObj, uz = dzo / dObj;
+    const pasoM = 1.5, off = (S.t * 2.4) % pasoM;
+    MIGAS.forEach((m, i) => {
+      const dd = off + 1.0 + i * pasoM;
+      if (dd < dObj - 0.5) {
+        m.visible = true;
+        m.position.x = S.x + ux * dd;
+        m.position.z = S.z + uz * dd;
+        m.material.opacity = 0.85 - i * 0.07;
+      } else m.visible = false;
+    });
+  } else MIGAS.forEach(m => { m.visible = false; });
+  /* mano de alto cuando la guía espera un peligro */
+  esperaSp.visible = !!S.esperando && !S.pausado;
+  if (esperaSp.visible) esperaSp.position.set(S.x, 3.4 + Math.sin(S.t * 6) * 0.12, S.z);
   /* anillo del toque */
   if (tapRing.visible) {
     const k = 1 + Math.sin(S.t * 6) * 0.2;
@@ -1033,6 +1169,8 @@ function animarVisual(dt) {
 /* ---------- Final ---------- */
 function terminar() {
   S.fin = true; S.pausado = true;
+  irBtn.style.display = "none";
+  sndFanfarria();
   const evacT = S.t - S.flags.evacT0;
   S.puntos += 25;
   if (evacT < 30) { S.puntos += 10; S.flags.evacBonus = true; }
@@ -1100,10 +1238,10 @@ function intro() {
     '<h2 style="text-align:center">Turno Seguro 3D · Mundo Operativo</h2>' +
     '<p style="font-size:14.5px;text-align:center;margin:4px 0 10px">Recorre la planta en 3D, esquiva los riesgos y llega al punto de encuentro. Tu objetivo siempre está arriba 🎯 y la flecha amarilla te guía.</p>' +
     '<div class="ctl-demo">' +
-    '<div class="k" style="border-color:var(--green)">👆<small><strong>Toca el piso a dónde ir</strong><br>y el personaje camina solo</small></div>' +
-    '<div class="k">W A S D<small>también sirven</small></div>' +
+    '<div class="k" style="border-color:var(--green)">👣<small><strong>Pulsa el botón verde de abajo</strong><br>y el personaje camina solo,<br>esperando ante cada peligro ✋</small></div>' +
+    '<div class="k">👆<small>o toca el piso<br>a donde quieras ir</small></div>' +
     '</div>' +
-    '<p style="font-size:13px;text-align:center;color:var(--muted);margin:2px 0 8px">Al llegar a un punto verde ⚡ el personaje lo usa automáticamente. Rojo en el piso = peligro; verde = seguro.</p>' +
+    '<p style="font-size:13px;text-align:center;color:var(--muted);margin:2px 0 8px">Sigue las huellas amarillas. En los puntos verdes ⚡ el personaje actúa automáticamente. Rojo en el piso = peligro; verde = seguro.</p>' +
     '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
     '<button class="btn" id="btnGo">▶ Iniciar el turno</button>' +
     '<button class="btn sec" id="btn2d">Versión 2D ligera</button>' +
@@ -1116,7 +1254,9 @@ function empezar() {
   const n = document.getElementById("nombre").value.trim();
   S.nombre = n || "Jugador(a)";
   cerrarPanel();
-  toast("¡Buen turno, " + escHtml(S.nombre) + "! <strong>Toca el casillero azul</strong> (donde está la mano 👆) y tu personaje irá solo.", 5600);
+  iniciarAudioFondo();
+  setIrBtn();
+  toast("¡Buen turno, " + escHtml(S.nombre) + "! Pulsa el botón verde <strong>👣 Ir al objetivo</strong> de abajo y yo te guío paso a paso.", 6000);
 }
 
 window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
@@ -1124,6 +1264,7 @@ window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
               animar: (dt) => animarVisual(dt),
               getTarget: () => target, setTarget: (x, z) => { target = { x, z }; },
               getReal: () => real,
+              getAuto: () => autoPilot, setAuto: (v) => { autoPilot = v; setIrBtn(); },
               empezar, togKit, confKit, abrirKit };
 
 intro();
