@@ -26,6 +26,32 @@
     max-width: 1180px; box-shadow: 0 30px 80px rgba(0,0,0,0.65);
     border-radius: 12px; overflow: hidden; background: #BFDDE8;
   }
+  /* ---------- Joystick táctil ---------- */
+  #joy {
+    position: absolute; bottom: 22px; left: 22px; z-index: 12;
+    width: 132px; height: 132px; border-radius: 50%;
+    background: rgba(255,255,255,0.22); border: 3px solid rgba(255,255,255,0.55);
+    backdrop-filter: blur(3px); touch-action: none; display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  #joy::after {
+    content: "";
+    position: absolute; inset: 0; margin: auto;
+    width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5);
+  }
+  #joyKnob {
+    position: absolute; left: 50%; top: 50%;
+    width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #cfd8d4);
+    border: 2px solid rgba(0,0,0,0.18);
+    box-shadow: 0 5px 14px rgba(0,0,0,0.4);
+    transition: transform 0.06s linear;
+  }
+  #joy.on { background: rgba(255,255,255,0.32); }
+  @media (max-width: 900px), (pointer: coarse) {
+    #joy { display: block; }
+  }
+  #joy.forzado { display: block; }
   #stage canvas { display: block; width: 100% !important; height: 100% !important; }
   #stage.frozen canvas { filter: grayscale(1) contrast(1.15); }
   #stage.shake { animation: shake 0.5s both; }
@@ -165,6 +191,55 @@
   .confetti i { position: absolute; top: -16px; width: 9px; height: 14px; border-radius: 2px; animation: cf linear forwards; }
   @keyframes cf { to { transform: translateY(110vh) rotate(680deg); } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+
+  /* ---------- Celular: pantalla completa (al final: debe ganar la cascada) ---------- */
+  @media (max-width: 900px), (pointer: coarse) {
+    body { align-items: stretch; justify-content: stretch; }
+    #stage {
+      width: 100vw; height: 100vh; height: 100dvh;
+      max-width: none; aspect-ratio: auto; border-radius: 0; box-shadow: none;
+    }
+    #hud { top: 8px; left: 8px; right: 8px; padding: 6px 9px; font-size: 12px; gap: 6px; }
+    #hud .pts { font-size: 14.5px; }
+    #hud .lbl { font-size: 9px; }
+    #hud .avatar { font-size: 17px; }
+    #hud button { font-size: 16px; }
+    #objetivo { top: 48px; font-size: 11.5px; padding: 6px 13px; max-width: 95%; }
+    #toast { top: 82px; font-size: 12.5px; padding: 8px 12px; max-width: 95%; }
+    #irBtn {
+      bottom: 30px; right: 14px; left: auto; transform: none;
+      font-size: 14px; padding: 12px 16px; border-radius: 999px;
+      animation: latidoMovil 1.6s ease-in-out infinite;
+    }
+    #irBtn:active { transform: translateY(4px); animation: none; }
+    #irBtn.activo { animation: none; }
+    @keyframes latidoMovil { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    #joy { width: 118px; height: 118px; bottom: 18px; left: 18px; }
+    #joyKnob { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
+    .panel { padding: 18px 16px; border-radius: 16px; max-height: 90%; }
+    .panel h2 { font-size: 19px; }
+    .panel .exp { font-size: 13px; padding: 9px 12px; }
+    .ctl-demo { gap: 8px; }
+    .ctl-demo .k { padding: 7px 9px; font-size: 13px; }
+    .ctl-demo .k small { font-size: 10px; }
+    .kit-grid { gap: 6px; }
+    .kit-item { font-size: 10px; padding: 7px 3px; }
+    .kit-item .ico { font-size: 21px; }
+    .btn { font-size: 15px; padding: 12px 14px; }
+    .res-pct { font-size: 44px; }
+    .medallas { gap: 6px; }
+    .medalla { width: 82px; font-size: 10.5px; }
+    .medalla .ico { font-size: 27px; }
+    input[type=text] { font-size: 16px; padding: 11px 13px; }
+  }
+  /* pantallas muy bajas (celular acostado) */
+  @media (max-height: 460px) and (pointer: coarse) {
+    #joy { width: 96px; height: 96px; bottom: 10px; left: 12px; }
+    #joyKnob { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+    #irBtn { bottom: 14px; font-size: 13px; padding: 10px 14px; }
+    #objetivo { top: 44px; }
+    #toast { top: 76px; }
+  }
 </style>
 </head>
 <body>
@@ -184,6 +259,7 @@
   <div id="toast"></div>
   <div id="ruidoFx"></div>
   <button id="irBtn">👣 Ir al objetivo</button>
+  <div id="joy"><div id="joyKnob"></div></div>
   <div id="overlay"></div>
 </div>
 
@@ -203,8 +279,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /* ---------- Estado ---------- */
 const S = {
-  nombre: "", x: 3, z: 0, yaw: Math.PI / 2, andando: false, animT: 0,
-  epp: false, oidos: false, inv: 0,
+  nombre: "", mundo: 1, etapa: 0,
+  x: 3, z: 0, yaw: Math.PI / 2, andando: false, animT: 0,
+  epp: false, oidos: false, careta: false, inv: 0,
   puntos: 0, bien: 100, errores: 0, errs: {}, reportes: 0,
   checkpoint: { x: 3, z: 0 }, pausado: true, fin: false, t: 0,
   flags: { apilado: false, contacto: false, electrico: false,
@@ -214,7 +291,16 @@ const S = {
            kitIntentos: 0, avisos: {} },
   limpio: { bodega: true, monta: true, ruido: true, carrito: true }
 };
-const MAX = 295;
+/* Dos mundos independientes: 1 = Planta (operativo), 2 = Oficina */
+const MUNDOS = {
+  1: { nombre: "Mundo 1 · Planta", ico: "🏭", spawn: { x: 3, z: 0 }, meta: 118, max: 190,
+       etapas: ["Vestier · EPP", "Bodega · caída de objetos", "Montacargas · tránsito",
+                "Zona de ruido", "Riesgo eléctrico", "Soldadura", "Salida de planta"] },
+  2: { nombre: "Mundo 2 · Oficina", ico: "🏢", spawn: { x: 124, z: 0 }, meta: 250.5, max: 155,
+       etapas: ["Cables y orden", "Pasillo · carrito", "Derrame de café", "Pausa activa",
+                "Archivo y cargas", "Ergonomía", "Cierre y evacuación"] }
+};
+let MAX = 210;
 let target = null;     /* {x,z} destino del toque */
 let autoPilot = false; /* guía automática hacia el objetivo */
 const irBtn = document.getElementById("irBtn");
@@ -510,6 +596,38 @@ const cono = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.3, 14), mat(0xF57F17))
 cono.position.set(105.6, 0.65, 0); cono.castShadow = true; cono.visible = false; scene.add(cono);
 let tecnico = null, tecnicoLlega = 0;
 
+/* --- Soldadura: careta + arco con chispas (x 110–118) --- */
+const caretaBox = caja(1.0, 1.4, 0.7, 0xF57F17); caretaBox.position.set(110, 0.7, -4.6); scene.add(caretaBox);
+const caretaIcon = spriteEmoji("🥽", 1.1); caretaIcon.position.set(110, 2.0, -4.4); scene.add(caretaIcon);
+const mesaSold = caja(3.2, 0.2, 1.4, 0x546E7A); mesaSold.position.set(114.5, 1.0, -4.6); scene.add(mesaSold);
+[[-1.4], [1.4]].forEach(([dx]) => {
+  const p = caja(0.16, 1.0, 1.0, 0x37474F); p.position.set(114.5 + dx, 0.5, -4.6); scene.add(p);
+});
+const piezaSold = caja(1.6, 0.25, 0.8, 0x78909C); piezaSold.position.set(114.5, 1.22, -4.6); scene.add(piezaSold);
+const arco = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8),
+  new THREE.MeshBasicMaterial({ color: 0xEAF6FF }));
+arco.position.set(114.5, 1.4, -4.6); scene.add(arco);
+const luzArco = new THREE.PointLight(0x9FD8FF, 0, 12); luzArco.position.set(114.5, 1.8, -4.6); scene.add(luzArco);
+const chispasSold = [];
+for (let i = 0; i < 8; i++) {
+  const ch = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.09),
+    new THREE.MeshBasicMaterial({ color: 0xFFC246 }));
+  ch.position.set(114.5, 1.4, -4.6); scene.add(ch);
+  chispasSold.push({ m: ch, a: Math.random() * 7, v: 0.6 + Math.random() * 0.9, f: Math.random() });
+}
+const soldadorG = new THREE.Group(); soldadorG.position.set(114.5, 0, -5.6); scene.add(soldadorG);
+(function () {
+  const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.42, 4, 10), mat(0x455A64));
+  t.position.y = 1.35; t.castShadow = true; soldadorG.add(t);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.38), mat(0x263238));
+  cab.position.set(0, 1.92, 0.06); soldadorG.add(cab);
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.04), new THREE.MeshBasicMaterial({ color: 0x0A5CA8 }));
+  visor.position.set(0, 1.95, 0.26); soldadorG.add(visor);
+})();
+const soldZona = plano(7.5, 4.2, 0xB62233, 0.28); soldZona.position.set(114.5, 0.03, -2.6); scene.add(soldZona);
+const senalSold = letrero("⚠ RADIACIÓN · USE CARETA", 5, 1.2, "#F2B705", "#1F262A", 40);
+senalSold.position.set(114.5, 2.9, -6.27); scene.add(senalSold);
+
 /* ================= MUNDO OFICINA (x 122–256) ================= */
 
 /* --- Cables sueltos cruzando el pasillo (x≈132) --- */
@@ -779,6 +897,11 @@ cinta.scale.z = 0.72; cinta.position.y = 0.02; chalecoJ.add(cinta);
 chalecoJ.position.y = 1.56; chalecoJ.visible = false; jugador.g.add(chalecoJ);
 const gafasJ = caja(0.38, 0.09, 0.08, 0x263238, false);
 gafasJ.position.set(0, 2.25, 0.24); gafasJ.visible = false; jugador.g.add(gafasJ);
+const caretaJ = new THREE.Group();
+const caretaCara = caja(0.42, 0.52, 0.36, 0x263238, false); caretaCara.position.y = 2.24; caretaJ.add(caretaCara);
+const caretaVisor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.13, 0.04), new THREE.MeshBasicMaterial({ color: 0x0A5CA8 }));
+caretaVisor.position.set(0, 2.28, 0.2); caretaJ.add(caretaVisor);
+caretaJ.visible = false; jugador.g.add(caretaJ);
 const orejasJ = new THREE.Group();
 [-0.27, 0.27].forEach(x => {
   const oj = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.07, 10), mat(0xF57F17));
@@ -815,7 +938,7 @@ new GLTFLoader().load("Soldier.glb", (gltf) => {
     real = { model, mixer, acc, head, spine, clips: gltf.animations, w: { Idle: 1, Walk: 0 } };
     jugador.g.visible = false;
     /* el EPP pasa a seguir los huesos del modelo real */
-    [cascoJ, chalecoJ, gafasJ, orejasJ].forEach(m => {
+    [cascoJ, chalecoJ, gafasJ, orejasJ, caretaJ].forEach(m => {
       jugador.g.remove(m); scene.add(m); m.scale.setScalar(0.6);
     });
   } catch (e) { /* respaldo procedural */ }
@@ -857,6 +980,10 @@ const INTER = [
       S.flags.electrico = true; S.reportes++; S.puntos += 20; sndOk();
       cono.visible = true; tecnicoLlega = S.t + 1.4;
       toast("Zona señalizada y reporte enviado: viene el personal autorizado. <strong>+20</strong>");
+    } },
+  { id: "careta", x: 110, z: -3.6, activo: () => S.epp && !S.careta, usar: () => {
+      S.careta = true; S.puntos += 10; sndPick(); caretaJ.visible = true;
+      toast("Careta de soldadura puesta. El arco eléctrico ya no daña tu vista. <strong>+10</strong>");
     } },
   { id: "cables", x: 128, z: -3.6, activo: () => S.epp && !S.flags.cables, usar: () => {
       S.flags.cables = true; S.reportes++; S.puntos += 20; sndOk();
@@ -922,24 +1049,30 @@ const esperaSp = spriteEmoji("✋", 1.4); esperaSp.visible = false; scene.add(es
 
 /* ---------- Objetivos ---------- */
 function objetivoActual() {
-  if (!S.epp) return { x: 7, z: -3.6, txt: "Toca el casillero y arma tu EPP" };
-  if (S.x < 42) return { x: 43, z: 0, txt: "Cruza la bodega — no pises los círculos rojos" };
-  if (!S.flags.contacto && S.x < 68) return { x: 45, z: -3.6, txt: "Activa el contacto visual 👀 y cruza el montacargas" };
-  if (S.x < 70) return { x: 71, z: 0, txt: "Cruza la zona del montacargas" };
-  if (!S.oidos && S.x < 98) return { x: 73, z: -3.6, txt: "Toma los protectores auditivos 🎧" };
-  if (S.x < 99) return { x: 100, z: 0, txt: "Cruza la sala de compresores" };
-  if (!S.flags.electrico && S.x < 107) return { x: 103, z: -3.6, txt: "Señaliza y reporta el cable eléctrico" };
-  if (S.x < 121) return { x: 122.5, z: 0, txt: "Cruza la puerta al mundo oficina 🏢" };
-  if (!S.flags.cables && S.x < 131) return { x: 128, z: -3.6, txt: "Organiza y reporta los cables del pasillo" };
-  if (S.x < 136) return { x: 137, z: 3.6, txt: "Hazte a un lado: deja libre el carril del carrito" };
-  if (S.x < 163) return { x: 164, z: 3.6, txt: "Cede el carril: pasa por el lado del carrito 📬" };
-  if (!S.flags.derrame && S.x < 171) return { x: 168, z: -3.6, txt: "Señaliza el derrame de café ☕" };
-  if (!S.flags.pausa) return { x: 185, z: -3.6, txt: "Haz tu pausa activa 🤸" };
-  if (!S.flags.archivo) return { x: 200, z: -3.6, txt: "Mueve el archivo con el carro 📦" };
-  if (!S.flags.ergo) return { x: 215, z: -3.6, txt: "Ajusta tu puesto de trabajo 💺" };
-  if (!S.flags.cierre) return { x: 228, z: -3.6, txt: "Cierra tu jornada: apaga y ordena 🔌" };
-  if (!S.flags.alarma) return { x: 233, z: 0, txt: "Avanza hacia la salida →" };
-  return { x: 252, z: 0, txt: "🚨 ¡Evacúa! Ve al punto de encuentro" };
+  if (S.mundo === 1) {
+    /* ---- MUNDO 1 · PLANTA ---- */
+    if (!S.epp) return { e: 0, x: 7, z: -3.6, txt: "Toca el casillero y arma tu EPP" };
+    if (S.x < 42) return { e: 1, x: 43, z: 0, txt: "Cruza la bodega — no pises los círculos rojos" };
+    if (!S.flags.contacto && S.x < 68) return { e: 2, x: 45, z: -3.6, txt: "Activa el contacto visual 👀 y cruza el montacargas" };
+    if (S.x < 70) return { e: 2, x: 71, z: 0, txt: "Cruza la zona del montacargas" };
+    if (!S.oidos && S.x < 98) return { e: 3, x: 73, z: -3.6, txt: "Toma los protectores auditivos 🎧" };
+    if (S.x < 99) return { e: 3, x: 100, z: 0, txt: "Cruza la sala de compresores" };
+    if (!S.flags.electrico && S.x < 107) return { e: 4, x: 103, z: -3.6, txt: "Señaliza y reporta el cable eléctrico" };
+    if (!S.careta && S.x < 112) return { e: 5, x: 110, z: -3.6, txt: "Toma la careta de soldadura 🥽" };
+    if (S.x < 118) return { e: 5, x: 119, z: 0, txt: "Cruza la zona de soldadura" };
+    return { e: 6, x: 119.5, z: 0, txt: "🏁 ¡Fin del turno en planta! Sal por la puerta" };
+  }
+  /* ---- MUNDO 2 · OFICINA ---- */
+  if (!S.flags.cables && S.x < 131) return { e: 0, x: 128, z: -3.6, txt: "Organiza y reporta los cables del pasillo" };
+  if (S.x < 136) return { e: 1, x: 137, z: 3.6, txt: "Hazte a un lado: deja libre el carril del carrito" };
+  if (S.x < 163) return { e: 1, x: 164, z: 3.6, txt: "Cede el carril: pasa por el lado del carrito 📬" };
+  if (!S.flags.derrame && S.x < 171) return { e: 2, x: 168, z: -3.6, txt: "Señaliza el derrame de café ☕" };
+  if (!S.flags.pausa) return { e: 3, x: 185, z: -3.6, txt: "Haz tu pausa activa 🤸" };
+  if (!S.flags.archivo) return { e: 4, x: 200, z: -3.6, txt: "Mueve el archivo con el carro 📦" };
+  if (!S.flags.ergo) return { e: 5, x: 215, z: -3.6, txt: "Ajusta tu puesto de trabajo 💺" };
+  if (!S.flags.cierre) return { e: 6, x: 228, z: -3.6, txt: "Cierra tu jornada: apaga y ordena 🔌" };
+  if (!S.flags.alarma) return { e: 6, x: 233, z: 0, txt: "Avanza hacia la salida →" };
+  return { e: 6, x: 252, z: 0, txt: "🚨 ¡Evacúa! Ve al punto de encuentro" };
 }
 
 /* ---------- HUD / toast / paneles ---------- */
@@ -1068,13 +1201,54 @@ function confKit() {
   toast("¡EPP completo! La barrera está abierta. <strong>+" + pts + "</strong> " + (S.flags.kitIntentos === 1 ? "(kit perfecto 🦅)" : ""));
 }
 
-/* ---------- Entrada: tocar a dónde ir + teclado ---------- */
+/* ---------- Entrada: joystick + tocar a dónde ir + teclado ---------- */
 const keys = {};
 addEventListener("keydown", e => {
   if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
   keys[e.key.toLowerCase()] = true;
 });
 addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+
+/* joystick virtual: devuelve {x,z} normalizado */
+const joy = { x: 0, z: 0, activo: false, id: null };
+(function initJoystick() {
+  const base = document.getElementById("joy"), knob = document.getElementById("joyKnob");
+  const R = 46;
+  function mover(e) {
+    const r = base.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let dx = e.clientX - cx, dy = e.clientY - cy;
+    const d = Math.hypot(dx, dy);
+    if (d > R) { dx = dx / d * R; dy = dy / d * R; }
+    knob.style.transform = "translate(" + dx + "px," + dy + "px)";
+    const m = Math.max(Math.hypot(dx, dy) / R, 0);
+    joy.x = (dx / R); joy.z = (dy / R);
+    if (m < 0.18) { joy.x = 0; joy.z = 0; }
+  }
+  base.addEventListener("pointerdown", e => {
+    e.preventDefault(); e.stopPropagation();
+    joy.activo = true; joy.id = e.pointerId;
+    base.classList.add("on");
+    mover(e);
+    if (autoPilot) { autoPilot = false; setIrBtn(); }
+    /* capturar al final: si falla, el joystick ya quedó operativo */
+    try { base.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  base.addEventListener("pointermove", e => {
+    if (!joy.activo || e.pointerId !== joy.id) return;
+    e.preventDefault(); e.stopPropagation();
+    mover(e);
+  });
+  const soltar = e => {
+    if (e.pointerId !== joy.id) return;
+    joy.activo = false; joy.x = 0; joy.z = 0;
+    base.classList.remove("on");
+    knob.style.transform = "translate(0,0)";
+  };
+  /* sin pointerleave: con captura el dedo puede salirse del círculo sin soltar el control */
+  base.addEventListener("pointerup", soltar);
+  base.addEventListener("pointercancel", soltar);
+})();
 const ray = new THREE.Raycaster();
 const planoPiso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const vTmp = new THREE.Vector3();
@@ -1110,6 +1284,7 @@ function update(dt) {
   if (keys["arrowright"] || keys["d"]) vx += 1;
   if (keys["arrowup"] || keys["w"]) vz -= 1;
   if (keys["arrowdown"] || keys["s"]) vz += 1;
+  if (!vx && !vz && (joy.x || joy.z)) { vx = joy.x; vz = joy.z; }
   if (vx || vz) {
     target = null; tapRing.visible = false;
     if (autoPilot) { autoPilot = false; setIrBtn(); }
@@ -1258,6 +1433,22 @@ function update(dt) {
     }
   }
 
+  /* --- soldadura: radiación del arco --- */
+  const enSold = S.x > 111 && S.x < 118.5 && S.z > -5 && S.z < 0;
+  soldZona.material.color.set(S.careta ? 0x00795C : 0xB62233);
+  soldZona.material.opacity = S.careta ? 0.22 : 0.2 + Math.abs(Math.sin(S.t * 5)) * 0.14;
+  if (enSold && !S.careta) {
+    S.bien = clamp(S.bien - 3.4 * dt, 0, 100);
+    avisoUnaVez("soldDolor", "🥽 ¡El destello del arco te está lastimando la vista! Vuelve por la <strong>careta</strong>.", 5000);
+  }
+  if (S.x > 105 && S.x < 110 && !S.careta) {
+    avisoUnaVez("soldAv", "Adelante hay <strong>soldadura en proceso</strong>: la radiación del arco quema la vista. Toma la careta 🥽 de la caja naranja.");
+  }
+  if (S.mundo === 1 && S.x > 118 && !S.flags.avisos.pSold) {
+    S.flags.avisos.pSold = true;
+    if (S.careta) { S.puntos += 15; sndOk(); toast("Zona de soldadura cruzada con protección visual. <strong>+15</strong>"); }
+  }
+
   /* --- mundo oficina --- */
   /* cables sueltos */
   if (S.inv <= 0 && !S.flags.cables && Math.abs(S.x - 132) < 1.3) leccion("cables");
@@ -1282,21 +1473,24 @@ function update(dt) {
     S.flags.avisos.pCarrito = true;
     if (S.limpio.carrito) { S.puntos += 15; sndOk(); toast("Pasillo cruzado sin un solo choque. <strong>+15</strong>"); }
   }
-  if (S.x > 42 && !S.flags.avisos.pBodega) {
+  if (S.mundo === 1 && S.x > 42 && !S.flags.avisos.pBodega) {
     S.flags.avisos.pBodega = true;
     if (S.limpio.bodega) { S.puntos += 15; sndOk(); toast("Cruzaste la bodega sin un solo golpe. <strong>+15</strong>"); }
   }
-  if (S.x > 70 && !S.flags.avisos.pMonta) {
+  if (S.mundo === 1 && S.x > 70 && !S.flags.avisos.pMonta) {
     S.flags.avisos.pMonta = true;
     if (S.limpio.monta) { S.puntos += 15; sndOk(); toast("Zona de montacargas superada sin incidentes. <strong>+15</strong>"); }
   }
-  if (S.x > 99 && !S.flags.avisos.pRuido) {
+  if (S.mundo === 1 && S.x > 99 && !S.flags.avisos.pRuido) {
     S.flags.avisos.pRuido = true;
     if (S.oidos) { S.puntos += 15; sndOk(); toast("Zona de ruido cruzada con protección. <strong>+15</strong>"); }
   }
 
-  /* evacuación (final del turno completo) */
-  if (S.x > 232 && S.flags.cierre && !S.flags.alarma) {
+  /* meta del Mundo 1: salir de planta */
+  if (S.mundo === 1 && S.x > MUNDOS[1].meta && !S.fin) { terminar(); return; }
+
+  /* evacuación (final del Mundo 2) */
+  if (S.mundo === 2 && S.x > 232 && S.flags.cierre && !S.flags.alarma) {
     S.flags.alarma = true; S.flags.evacT0 = S.t;
     flechas.forEach(f => f.visible = true);
     toast("🚨 ¡Alarma de evacuación! Sigue las flechas verdes hasta el <strong>punto de encuentro</strong>. Paso firme, sin correr.", 5000);
@@ -1305,7 +1499,11 @@ function update(dt) {
   if (S.flags.alarma && !S.fin && Math.floor(S.t * 1.2) !== Math.floor((S.t - dt) * 1.2)) sndAlerta();
   if (S.flags.alarma && S.x > 250.5 && !S.fin) terminar();
 
-  document.getElementById("objTxt").textContent = objetivoActual().txt;
+  const objN = objetivoActual();
+  const et = MUNDOS[S.mundo].etapas;
+  if (typeof objN.e === "number") S.etapa = Math.max(S.etapa, objN.e);
+  document.getElementById("objTxt").textContent =
+    "Nivel " + (S.etapa + 1) + "/" + et.length + " · " + objN.txt;
   hud();
 }
 
@@ -1335,6 +1533,7 @@ function animarVisual(dt) {
     cascoJ.position.set(V1.x, V1.y + 0.10, V1.z); cascoJ.rotation.y = yawVis;
     gafasJ.position.set(V1.x + fx * 0.135, V1.y + 0.045, V1.z + fz * 0.135); gafasJ.rotation.y = yawVis;
     orejasJ.position.set(V1.x, V1.y - 1.28, V1.z); orejasJ.rotation.y = yawVis;
+    caretaJ.position.set(V1.x + fx * 0.06, V1.y - 1.32, V1.z + fz * 0.06); caretaJ.rotation.y = yawVis;
     real.spine.getWorldPosition(V1);
     chalecoJ.position.set(V1.x, V1.y - 0.12, V1.z); chalecoJ.rotation.y = yawVis;
   } else {
@@ -1404,6 +1603,18 @@ function animarVisual(dt) {
     const k = 1 + Math.sin(S.t * 6) * 0.2;
     tapRing.scale.set(k, k, 1);
   }
+  /* soldadura: arco parpadeante y chispas saltando */
+  const kArco = 0.55 + Math.abs(Math.sin(S.t * 22)) * 0.45;
+  arco.scale.setScalar(0.7 + kArco * 0.6);
+  arco.material.color.setRGB(kArco, kArco * 0.98, 1);
+  luzArco.intensity = kArco * 2.6;
+  chispasSold.forEach(c => {
+    c.f += dt * c.v * 1.9;
+    if (c.f > 1) { c.f = 0; c.a = Math.random() * 7; c.v = 0.6 + Math.random() * 0.9; }
+    const r = c.f * 2.1;
+    c.m.position.set(114.5 + Math.cos(c.a) * r, 1.4 + Math.sin(c.f * 3.1) * 0.9 - c.f * c.f * 1.5, -4.6 + Math.sin(c.a) * r * 0.6);
+    c.m.visible = c.m.position.y > 0.05;
+  });
   /* ondas de ruido */
   ondas.forEach(({ o, f }) => {
     const k = ((S.t * 0.8 + f * 0.33) % 1);
@@ -1430,36 +1641,47 @@ function animarVisual(dt) {
 function terminar() {
   S.fin = true; S.pausado = true;
   irBtn.style.display = "none";
+  document.getElementById("joy").style.display = "none";
   sndFanfarria();
-  const evacT = S.t - S.flags.evacT0;
+  const m1 = S.mundo === 1;
   S.puntos += 25;
-  if (evacT < 30) { S.puntos += 10; S.flags.evacBonus = true; }
+  if (!m1) {
+    const evacT = S.t - S.flags.evacT0;
+    if (evacT < 30) { S.puntos += 10; S.flags.evacBonus = true; }
+  }
   const pct = clamp(Math.round((S.puntos / MAX) * 100), 0, 100);
   const niv = pct >= 90 ? "Líder SST" : pct >= 70 ? "Nivel Seguro" : pct >= 50 ? "Nivel Preventivo" : "Nivel Básico";
-  const medallas = [
-    { n: "Cero golpes", ico: "🛡️", ok: S.errores === 0 },
-    { n: "Reportero en acción", ico: "📣", ok: S.reportes >= 2 },
-    { n: "Evacuación ejemplar", ico: "🏃", ok: S.flags.evacBonus }
-  ];
+  const medallas = m1
+    ? [{ n: "Cero golpes", ico: "🛡️", ok: S.errores === 0 },
+       { n: "Reportero en acción", ico: "📣", ok: S.reportes >= 2 },
+       { n: "EPP completo", ico: "🦺", ok: S.epp && S.oidos && S.careta }]
+    : [{ n: "Cero golpes", ico: "🛡️", ok: S.errores === 0 },
+       { n: "Reportero en acción", ico: "📣", ok: S.reportes >= 2 },
+       { n: "Evacuación ejemplar", ico: "🏃", ok: S.flags.evacBonus }];
   try {
     const arr = JSON.parse(localStorage.getItem("ts_sesiones") || "[]");
-    arr.unshift({ nombre: S.nombre, fecha: new Date().toLocaleString("es-CO"), modo: "Aventura 3D",
+    arr.unshift({ nombre: S.nombre, fecha: new Date().toLocaleString("es-CO"),
+                  modo: MUNDOS[S.mundo].nombre,
                   puntos: S.puntos, pct: pct, nivel: niv, errores: S.errores, errs: S.errs });
     localStorage.setItem("ts_sesiones", JSON.stringify(arr.slice(0, 100)));
+    if (m1 && pct >= 50) localStorage.setItem("ts_mundo1_ok", "1");
   } catch (e) {}
   panel(
-    '<div style="text-align:center;font-size:40px">🏁</div>' +
-    '<h2 style="text-align:center">' + escHtml(S.nombre) + ', ¡llegaste al punto de encuentro!</h2>' +
+    '<div style="text-align:center;font-size:40px">' + (m1 ? "🏭" : "🏁") + '</div>' +
+    '<h2 style="text-align:center">' + escHtml(S.nombre) + ', ' +
+      (m1 ? "¡terminaste el turno en planta!" : "¡llegaste al punto de encuentro!") + '</h2>' +
     '<div class="res-pct">' + pct + '%</div>' +
     '<span class="nivel">' + S.puntos + ' / ' + MAX + ' pts · ' + niv + ' · Bienestar ' + Math.round(S.bien) + '%</span>' +
     '<div class="medallas">' +
     medallas.map(m => '<div class="medalla ' + (m.ok ? "" : "off") + '"><span class="ico">' + m.ico + '</span>' + m.n + '</div>').join("") +
     '</div>' +
-    (S.errores ? '<div class="exp"><strong>PREVI:</strong> Tuviste ' + S.errores + ' incidente(s). En el modo clásico puedes repasar esos riesgos con calma.</div>'
-               : '<div class="exp"><strong>PREVI:</strong> Turno impecable: ni un solo incidente. Así se ve la cultura preventiva en acción. 🏆</div>') +
-    '<button class="btn" id="btnOtra">Jugar de nuevo</button>' +
-    '<button class="btn sec" id="btnMenu">Volver al menú</button>', "ok");
-  document.getElementById("btnOtra").onclick = () => location.reload();
+    (S.errores ? '<div class="exp"><strong>PREVI:</strong> Tuviste ' + S.errores + ' incidente(s). Repite el mundo para dominar esos riesgos.</div>'
+               : '<div class="exp"><strong>PREVI:</strong> ¡Impecable: ni un solo incidente! Así se ve la cultura preventiva en acción. 🏆</div>') +
+    (m1 ? '<button class="btn" id="btnSig">🏢 Continuar al Mundo 2 · Oficina</button>' : '') +
+    '<button class="btn' + (m1 ? ' sec' : '') + '" id="btnOtra">Repetir este mundo</button>' +
+    '<button class="btn sec" id="btnMenu">Elegir mundo</button>', "ok");
+  if (m1) document.getElementById("btnSig").onclick = () => { location.href = "aventura3d.html?mundo=2"; };
+  document.getElementById("btnOtra").onclick = () => { location.href = "aventura3d.html?mundo=" + S.mundo; };
   document.getElementById("btnMenu").onclick = () => location.href = "index.html";
   if (pct >= 70) confeti();
   sndOk();
@@ -1491,30 +1713,51 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 
-/* ---------- Intro ---------- */
-function intro() {
-  panel(
-    '<div style="text-align:center;font-size:44px">👷</div>' +
-    '<h2 style="text-align:center">Turno Seguro 3D · Planta + Oficina</h2>' +
-    '<p style="font-size:14.5px;text-align:center;margin:4px 0 10px">Un turno completo en 3D: primero la planta (EPP, cargas, montacargas, ruido, riesgo eléctrico) y luego la oficina (cables, pisos húmedos, pausas activas, ergonomía) hasta evacuar al punto de encuentro. Tu objetivo siempre está arriba 🎯.</p>' +
-    '<div class="ctl-demo">' +
-    '<div class="k" style="border-color:var(--green)">👣<small><strong>Pulsa el botón verde de abajo</strong><br>y el personaje camina solo,<br>esperando ante cada peligro ✋</small></div>' +
-    '<div class="k">👆<small>o toca el piso<br>a donde quieras ir</small></div>' +
-    '</div>' +
-    '<p style="font-size:13px;text-align:center;color:var(--muted);margin:2px 0 8px">Sigue las huellas amarillas. En los puntos verdes ⚡ el personaje actúa automáticamente. Rojo en el piso = peligro; verde = seguro.</p>' +
-    '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
-    '<button class="btn" id="btnGo">▶ Iniciar el turno</button>' +
-    '<button class="btn sec" id="btnVolver">Volver al menú</button>');
-  document.getElementById("btnGo").onclick = empezar;
-  document.getElementById("btnVolver").onclick = () => location.href = "index.html";
+/* ---------- Intro con selección de mundo ---------- */
+function aplicarMundo(n) {
+  S.mundo = n; S.etapa = 0;
+  const M = MUNDOS[n];
+  MAX = M.max;
+  S.x = M.spawn.x; S.z = M.spawn.z;
+  S.checkpoint = { x: M.spawn.x, z: M.spawn.z };
+  jugador.g.position.set(S.x, 0, S.z);
+  camera.position.set(S.x, 8.4, S.z + 11.2);
+  if (n === 2) {
+    /* en oficina se llega ya equipado desde planta: sin EPP de planta a la vista */
+    S.epp = true; S.oidos = true; S.careta = true;
+    cascoJ.visible = false; chalecoJ.visible = false; gafasJ.visible = false;
+    orejasJ.visible = false; caretaJ.visible = false;
+  }
 }
-function empezar() {
-  const n = document.getElementById("nombre").value.trim();
+function intro() {
+  const m1ok = (() => { try { return localStorage.getItem("ts_mundo1_ok") === "1"; } catch (e) { return false; } })();
+  panel(
+    '<div style="text-align:center;font-size:42px">👷</div>' +
+    '<h2 style="text-align:center;margin-bottom:4px">Turno Seguro 3D</h2>' +
+    '<p style="font-size:14px;text-align:center;margin:0 0 12px;color:var(--muted)">Elige tu mundo. Cada uno son 7 niveles de riesgos reales.</p>' +
+    '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
+    '<button class="btn" id="btnM1">🏭 Mundo 1 · Planta<br><small style="font-weight:600;font-size:12px;opacity:0.9">EPP · cajas · montacargas · ruido · eléctrico · soldadura</small></button>' +
+    '<button class="btn blue" id="btnM2" style="background:linear-gradient(180deg,#1272C6,#0A5CA8);box-shadow:0 4px 0 #063E70,0 8px 18px rgba(0,0,0,0.2)">🏢 Mundo 2 · Oficina' +
+      (m1ok ? ' ✅' : '') + '<br><small style="font-weight:600;font-size:12px;opacity:0.9">cables · carrito · derrames · pausas · ergonomía</small></button>' +
+    '<div class="ctl-demo" style="margin-top:12px">' +
+    '<div class="k" style="border-color:var(--green)">🕹️<small><strong>Joystick</strong><br>abajo a la izquierda</small></div>' +
+    '<div class="k">👣<small><strong>Botón verde</strong><br>te guía solo</small></div>' +
+    '</div>' +
+    '<p style="font-size:12.5px;text-align:center;color:var(--muted);margin:8px 0 0">Rojo en el piso = peligro · verde = seguro · ⚡ el personaje actúa solo</p>');
+  document.getElementById("btnM1").onclick = () => empezar(1);
+  document.getElementById("btnM2").onclick = () => empezar(2);
+}
+function empezar(mundo, nombreDirecto) {
+  const campo = document.getElementById("nombre");
+  const n = nombreDirecto || (campo ? campo.value.trim() : "");
   S.nombre = n || "Jugador(a)";
+  try { localStorage.setItem("ts_nombre", S.nombre); } catch (e) {}
+  aplicarMundo(mundo || 1);
   cerrarPanel();
   iniciarAudioFondo();
   setIrBtn();
-  toast("¡Buen turno, " + escHtml(S.nombre) + "! Pulsa el botón verde <strong>👣 Ir al objetivo</strong> de abajo y yo te guío paso a paso.", 6000);
+  const M = MUNDOS[S.mundo];
+  toast("¡" + M.ico + " " + M.nombre + "! Usa el <strong>joystick 🕹️</strong> o pulsa <strong>👣 Ir al objetivo</strong> y yo te guío.", 6000);
 }
 
 window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
@@ -1523,9 +1766,21 @@ window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
               getTarget: () => target, setTarget: (x, z) => { target = { x, z }; },
               getReal: () => real,
               getAuto: () => autoPilot, setAuto: (v) => { autoPilot = v; setIrBtn(); },
+              getJoy: () => joy, MUNDOS, aplicarMundo,
               empezar, togKit, confKit, abrirKit };
 
-intro();
+/* si viene ?mundo=N desde "continuar"/"repetir", arrancar directo en ese mundo */
+(function () {
+  const p = new URLSearchParams(location.search).get("mundo");
+  let guardado = null;
+  try { guardado = localStorage.getItem("ts_nombre"); } catch (e) {}
+  if ((p === "1" || p === "2") && guardado) {
+    empezar(parseInt(p, 10), guardado);
+  } else {
+    if (p === "1" || p === "2") aplicarMundo(parseInt(p, 10));
+    intro();
+  }
+})();
 requestAnimationFrame(loop);
 </script>
 </body>
