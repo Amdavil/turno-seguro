@@ -92,6 +92,16 @@
   .bar.low > div { background: linear-gradient(180deg, #D53A4C, var(--red)); animation: pulse 1s infinite; }
   @keyframes pulse { 50% { opacity: 0.5; } }
   #hud button { background: none; border: none; font-size: 18px; cursor: pointer; padding: 2px; }
+  #vidas { font-size: 15px; letter-spacing: -1px; white-space: nowrap; }
+  #vidas.critico { animation: pulse 0.7s infinite; }
+  .reglas-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 6px 0 4px; }
+  .reglas-tabla td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+  .reglas-tabla td:last-child { text-align: right; font-weight: 800; white-space: nowrap; }
+  .gana { background: var(--green-soft); border-left: 4px solid var(--green); border-radius: 10px; padding: 10px 13px; margin: 8px 0; }
+  .pierde { background: #FFF4F5; border-left: 4px solid var(--red); border-radius: 10px; padding: 10px 13px; margin: 8px 0; }
+  .gana h3, .pierde h3 { margin: 0 0 5px; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+  .gana h3 { color: var(--green); } .pierde h3 { color: var(--red); }
+  .gana ul, .pierde ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; }
   #objetivo {
     position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
     z-index: 9; max-width: 92%;
@@ -244,6 +254,8 @@
       <div class="lbl" id="hudBienLbl">Bienestar 100%</div>
       <div class="bar" id="hudBar"><div style="width:100%"></div></div>
     </div>
+    <span id="vidas" title="Tu estado de salud">💚💚💚</span>
+    <button id="reglasBtn" aria-label="Reglas">📋</button>
     <button id="musBtn" aria-label="Música">🎵</button>
     <button id="muteBtn" aria-label="Silenciar">🔊</button>
     <button onclick="location.href='index.html'" aria-label="Salir">🏠</button>
@@ -450,7 +462,29 @@ function plano(w, d, color, op) {
 }
 
 /* ---------- Mundo ---------- */
-const piso = new THREE.Mesh(new THREE.PlaneGeometry(420, 80), mat(0x9DB59B));
+/* textura procedural de concreto industrial */
+function texConcreto() {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const g = c.getContext("2d");
+  g.fillStyle = "#A8B3A6"; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2600; i++) {
+    const v = 150 + Math.random() * 70;
+    g.fillStyle = "rgba(" + v + "," + (v + 6) + "," + (v - 4) + ",0.5)";
+    g.fillRect(Math.random() * 256, Math.random() * 256, 2.5, 2.5);
+  }
+  for (let i = 0; i < 22; i++) {   /* manchas de aceite y desgaste */
+    g.fillStyle = "rgba(70,78,72," + (0.05 + Math.random() * 0.09) + ")";
+    g.beginPath(); g.ellipse(Math.random() * 256, Math.random() * 256,
+      8 + Math.random() * 26, 6 + Math.random() * 18, Math.random() * 3, 0, 7); g.fill();
+  }
+  g.strokeStyle = "rgba(90,98,92,0.28)"; g.lineWidth = 2;   /* juntas de losa */
+  g.strokeRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(52, 10);
+  return t;
+}
+const piso = new THREE.Mesh(new THREE.PlaneGeometry(420, 80),
+  new THREE.MeshLambertMaterial({ map: texConcreto() }));
 piso.rotation.x = -Math.PI / 2; piso.receiveShadow = true;
 piso.position.set(75, 0, 0);
 scene.add(piso);
@@ -465,7 +499,24 @@ const senda = plano(260, 4.6, 0xC3CEB9, 0.85); senda.position.set(128, 0.025, 0)
   l.position.set(128, 0.04, z); scene.add(l);
 });
 /* alfombra del mundo oficina */
-const alfombra = plano(136, 13.4, 0x8FA6BE, 0.92); alfombra.position.set(190, 0.02, 0); scene.add(alfombra);
+/* textura de alfombra de oficina */
+function texAlfombra() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d");
+  g.fillStyle = "#8496AE"; g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 4200; i++) {
+    const v = 118 + Math.random() * 48;
+    g.fillStyle = "rgba(" + v + "," + (v + 12) + "," + (v + 28) + ",0.55)";
+    g.fillRect(Math.random() * 128, Math.random() * 128, 1.6, 1.6);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(34, 4);
+  return t;
+}
+const alfombra = new THREE.Mesh(new THREE.PlaneGeometry(136, 13.4),
+  new THREE.MeshLambertMaterial({ map: texAlfombra() }));
+alfombra.rotation.x = -Math.PI / 2; alfombra.position.set(190, 0.02, 0);
+alfombra.receiveShadow = true; scene.add(alfombra);
 /* pasillo central de la oficina, más claro que la alfombra */
 const pasilloOf = plano(136, 4.4, 0xC8D2DC, 0.95); pasilloOf.position.set(190, 0.028, 0); scene.add(pasilloOf);
 /* umbral de la puerta: se nota el cambio de mundo */
@@ -582,7 +633,7 @@ for (let i = 0; i < 5; i++) {
 }
 const cono = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.3, 14), mat(0xF57F17));
 cono.position.set(105.6, 0.65, 0); cono.castShadow = true; cono.visible = false; scene.add(cono);
-let tecnico = null, tecnicoLlega = 0;
+let tecnico = null, tecnicoLlega = 0, gruaPuente = null;
 
 /* --- TRABAJO EN ALTURAS: plataforma, arnés, permiso y supervisor (x 56–68, z +3.5) --- */
 const ALT = { x: 64, z: 3.6, h: 3.4 };
@@ -859,6 +910,58 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
     const bote = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 0.55, 10), mat(0x546E7A));
     bote.position.set(x, 0.28, -4.2); scene.add(bote);
   });
+  /* ===================== PLANTA: más vida industrial ===================== */
+  /* grúa puente recorriendo la nave */
+  const rielA = caja(112, 0.3, 0.3, 0x8A96A0, false); rielA.position.set(60, 6.3, -4.6); scene.add(rielA);
+  const rielB = rielA.clone(); rielB.position.z = 4.6; scene.add(rielB);
+  gruaPuente = new THREE.Group(); scene.add(gruaPuente);
+  (function () {
+    const viga = caja(1.1, 0.7, 10, 0xF2B705, false); viga.position.y = 5.9; gruaPuente.add(viga);
+    const carro = caja(1.6, 0.7, 1.6, 0x455A64, false); carro.position.set(0, 5.4, 0); gruaPuente.add(carro);
+    const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.6, 6), mat(0x37474F));
+    cable.position.set(0, 3.9, 0); gruaPuente.add(cable);
+    const gancho = caja(0.5, 0.45, 0.5, 0xB0BEC5, false); gancho.position.set(0, 2.5, 0); gruaPuente.add(gancho);
+    const carga = caja(1.5, 1.1, 1.5, 0xBC8F5E); carga.position.set(0, 1.75, 0); gruaPuente.add(carga);
+  })();
+  /* señalización vertical ISO en postes */
+  const SENALES = [
+    [11, "⛑️ EPP OBLIGATORIO", "#0A5CA8"], [30, "⚠️ CARGA SUSPENDIDA", "#F2B705"],
+    [50, "🚜 TRÁNSITO DE MONTACARGAS", "#F2B705"], [70, "🎧 USO DE PROTECCIÓN AUDITIVA", "#0A5CA8"],
+    [98, "⚡ RIESGO ELÉCTRICO", "#B62233"], [112, "🥽 RADIACIÓN · USE CARETA", "#F2B705"]
+  ];
+  SENALES.forEach(([x, t, c]) => {
+    const poste = caja(0.12, 2.6, 0.12, 0xB0BEC5, false); poste.position.set(x, 1.3, 5.3); scene.add(poste);
+    const s = letrero(t, 3.6, 1.0, c, c === "#F2B705" ? "#1F262A" : "#fff", 30);
+    s.position.set(x, 2.75, 5.28); s.rotation.y = Math.PI; scene.add(s);
+    const s2 = s.clone(); s2.rotation.y = 0; s2.position.z = 5.32; scene.add(s2);
+  });
+  /* marcas viales del pasillo de montacargas */
+  for (let x = 46; x < 70; x += 6) {
+    const flechaP = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 3),
+      new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.55, depthWrite: false }));
+    flechaP.rotation.x = -Math.PI / 2; flechaP.rotation.z = -Math.PI / 2;
+    flechaP.position.set(x, 0.035, 0); scene.add(flechaP);
+  }
+  /* muelle de carga con camión al fondo */
+  const muelle = caja(9, 1.1, 5, 0xB0A99A); muelle.position.set(35, 0.55, -9.5); scene.add(muelle);
+  const camion = new THREE.Group(); camion.position.set(35, 0, -14.5); scene.add(camion);
+  (function () {
+    const furgon = caja(9, 3.2, 4.2, 0xECEFF1); furgon.position.y = 2.4; camion.add(furgon);
+    const franja = caja(9.05, 0.5, 4.25, 0x0A5CA8, false); franja.position.y = 1.5; camion.add(franja);
+    const cabina = caja(3, 2.6, 4, 0x1565C0); cabina.position.set(-6, 1.9, 0); camion.add(cabina);
+    const parab = caja(0.15, 1.2, 3.4, 0x9FD8F0, false); parab.position.set(-7.5, 2.5, 0); camion.add(parab);
+    [[-6, 2.2], [-6, -2.2], [2, 2.2], [2, -2.2], [4, 2.2], [4, -2.2]].forEach(([wx, wz]) => {
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.5, 14), mat(0x212121));
+      r.rotation.x = Math.PI / 2; r.position.set(wx, 0.75, wz); camion.add(r);
+    });
+  })();
+  /* charco de aceite señalizado (ambiente, no jugable) */
+  const charco = new THREE.Mesh(new THREE.CircleGeometry(1.5, 18),
+    new THREE.MeshBasicMaterial({ color: 0x3B3A33, transparent: true, opacity: 0.5, depthWrite: false }));
+  charco.rotation.x = -Math.PI / 2; charco.position.set(88, 0.04, 4.2); scene.add(charco);
+  const conoCharco = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.0, 14), mat(0xF57F17));
+  conoCharco.position.set(86.6, 0.5, 4.2); conoCharco.castShadow = true; scene.add(conoCharco);
+
   /* ===================== OFICINA: ambiente propio ===================== */
   /* cielo raso bajo con paneles y luminarias empotradas (nada de vigas) */
   const rasoY = 4.5;
@@ -938,6 +1041,46 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
       hoja.rotation.z = Math.cos(k * 1.25) * 0.4; hoja.rotation.x = Math.sin(k * 1.25) * 0.4;
       scene.add(hoja);
     }
+  });
+
+  /* recepción al entrar a la oficina */
+  const mostrador = caja(5, 1.15, 1.6, 0xEFEFE7); mostrador.position.set(128, 0.58, -4.4); scene.add(mostrador);
+  const tapaMost = caja(5.4, 0.12, 1.9, 0xC9B79A, false); tapaMost.position.set(128, 1.2, -4.4); scene.add(tapaMost);
+  const logoRec = letrero("RECEPCIÓN", 3.4, 0.9, "#0A5CA8", "#fff", 46);
+  logoRec.position.set(128, 2.6, -6.24); scene.add(logoRec);
+  const sillaRec = caja(0.7, 0.1, 0.7, 0x37474F, false); sillaRec.position.set(128, 0.7, -5.4); scene.add(sillaRec);
+  const pcRec = caja(0.8, 0.5, 0.07, 0x263238, false); pcRec.position.set(129.4, 1.55, -4.4); scene.add(pcRec);
+  /* sala de juntas con vidrio */
+  const juntasG = new THREE.Group(); scene.add(juntasG);
+  (function () {
+    const mesaJ = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 0.12, 20), mat(0xA1887F));
+    mesaJ.position.set(166, 1.05, -4.2); juntasG.add(mesaJ);
+    const pieJ = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.6, 1.0, 12), mat(0x546E7A));
+    pieJ.position.set(166, 0.5, -4.2); juntasG.add(pieJ);
+    for (let a = 0; a < 6; a++) {
+      const ang = a * 1.047;
+      const s = caja(0.62, 0.1, 0.62, 0x37474F, false);
+      s.position.set(166 + Math.cos(ang) * 2.9, 0.72, -4.2 + Math.sin(ang) * 2.0); juntasG.add(s);
+      const re = caja(0.62, 0.8, 0.1, 0x37474F, false);
+      re.position.set(166 + Math.cos(ang) * 3.25, 1.15, -4.2 + Math.sin(ang) * 2.25); juntasG.add(re);
+    }
+    /* pared de vidrio de la sala */
+    const vidrioJ = new THREE.Mesh(new THREE.BoxGeometry(9, 2.6, 0.08),
+      new THREE.MeshLambertMaterial({ color: 0xD7ECF6, transparent: true, opacity: 0.4 }));
+    vidrioJ.position.set(166, 1.3, -1.9); juntasG.add(vidrioJ);
+    const marcoJ = caja(9.2, 0.12, 0.14, 0xB0BEC5, false); marcoJ.position.set(166, 2.62, -1.9); juntasG.add(marcoJ);
+    const tvJ = caja(2.6, 1.5, 0.1, 0x1A1A1A, false); tvJ.position.set(166, 2.4, -6.2); juntasG.add(tvJ);
+  })();
+  const salaSign = letrero("SALA DE JUNTAS", 3.2, 0.8, "#455A64", "#fff", 40);
+  salaSign.position.set(166, 3.2, -1.85); scene.add(salaSign);
+  /* monitores encendidos en los puestos */
+  [178, 190, 212].forEach((x, i) => {
+    const pantallaOn = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.52),
+      new THREE.MeshBasicMaterial({ map: letreroTex(["INFORME", "REPORTE SST", "AGENDA"][i], "#0A2E52", "#7FD4FF", 44) }));
+    pantallaOn.position.set(x, 1.65, -5.04); scene.add(pantallaOn);
+    const tecl = caja(0.8, 0.05, 0.3, 0x37474F, false); tecl.position.set(x, 1.13, -4.5); scene.add(tecl);
+    const tazaOf = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.16, 10), mat(0xFFFFFF));
+    tazaOf.position.set(x + 0.7, 1.18, -4.6); scene.add(tazaOf);
   });
 
   /* --- borde frontal de la oficina: materas y archivadores bajos --- */
@@ -1300,11 +1443,59 @@ function objetivoActual() {
 /* ---------- HUD / toast / paneles ---------- */
 function hud() {
   document.getElementById("hudPts").textContent = S.puntos + " pts";
-  document.getElementById("hudBienLbl").textContent = "Bienestar " + Math.round(S.bien) + "%";
+  document.getElementById("hudBienLbl").textContent = "Salud " + Math.round(S.bien) + "%";
   const bar = document.getElementById("hudBar");
   bar.className = "bar" + (S.bien < 30 ? " low" : S.bien < 60 ? " warn" : "");
   bar.firstElementChild.style.width = clamp(S.bien, 0, 100) + "%";
+  const v = document.getElementById("vidas");
+  const n = S.bien > 66 ? 3 : S.bien > 33 ? 2 : S.bien > 0 ? 1 : 0;
+  v.textContent = "💚".repeat(n) + "🖤".repeat(3 - n);
+  v.classList.toggle("critico", n <= 1);
 }
+
+/* ---------- Reglas del juego: cómo se gana y cómo se pierde ---------- */
+function panelReglas(desdeBriefing) {
+  const M = MUNDOS[S.mundo];
+  panel(
+    '<h2 style="text-align:center">📋 Reglas del turno</h2>' +
+    '<div class="gana"><h3>✅ Ganas si…</h3><ul>' +
+    '<li>Llegas al <strong>final del recorrido</strong> (' + (S.mundo === 1 ? "la puerta de salida de planta" : "el punto de encuentro") + ')</li>' +
+    '<li>Llegas <strong>con salud</strong>: si te quedas en 0 💚 el turno termina mal</li>' +
+    '<li>Tu calificación sale del puntaje sobre <strong>' + M.max + '</strong> puntos:</li></ul>' +
+    '<table class="reglas-tabla">' +
+    '<tr><td>🔵 Líder SST</td><td>90% o más</td></tr>' +
+    '<tr><td>🟢 Nivel Seguro</td><td>70% – 89%</td></tr>' +
+    '<tr><td>🟡 Nivel Preventivo</td><td>50% – 69%</td></tr>' +
+    '<tr><td>🔴 Nivel Básico</td><td>menos de 50%</td></tr></table></div>' +
+    '<div class="pierde"><h3>❌ Pierdes el turno si…</h3><ul>' +
+    '<li>Tu salud llega a <strong>0 💚</strong> por acumular accidentes</li>' +
+    '<li>Son <strong>3 accidentes graves</strong> (o 5 leves) los que te dejan fuera</li>' +
+    '<li>Cada accidente te devuelve al inicio de la zona para intentarlo bien</li></ul></div>' +
+    '<div style="font-size:11.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px">Puntos</div>' +
+    '<table class="reglas-tabla">' +
+    '<tr><td>🧰 Tomar el EPP que exige la zona</td><td style="color:var(--green)">+10</td></tr>' +
+    '<tr><td>📋 Pedir permiso de trabajo</td><td style="color:var(--green)">+15</td></tr>' +
+    '<tr><td>📣 Reportar una condición insegura</td><td style="color:var(--green)">+20</td></tr>' +
+    '<tr><td>✅ Hacer la tarea con lo que exige</td><td style="color:var(--green)">+20 a +25</td></tr>' +
+    '<tr><td>🛡️ Cruzar una zona sin incidentes</td><td style="color:var(--green)">+15</td></tr>' +
+    '<tr><td>🏁 Terminar el recorrido</td><td style="color:var(--green)">+25</td></tr>' +
+    '<tr><td>⚠️ Accidente leve (golpe, tropiezo)</td><td style="color:var(--red)">−10 · −20 salud</td></tr>' +
+    '<tr><td>🚨 Accidente grave (caída, quemadura)</td><td style="color:var(--red)">−25 · −40 salud</td></tr>' +
+    '</table>' +
+    '<div style="font-size:11.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px">Controles</div>' +
+    '<div class="ctl-demo">' +
+    '<div class="k" style="border-color:var(--green)">🕹️<small><strong>Joystick</strong><br>o toca el piso</small></div>' +
+    '<div class="k" style="border-color:var(--yellow)">⚡<small><strong>Amarillo</strong><br>actuar</small></div>' +
+    '<div class="k">🎯<small><strong>Arriba</strong><br>tu objetivo</small></div>' +
+    '</div>' +
+    '<p style="font-size:12.5px;text-align:center;color:var(--muted);margin:6px 0 10px">🔴 rojo en el piso = peligro activo · 🟢 verde = ya es seguro pasar</p>' +
+    '<button class="btn" id="btnCerrarReglas">' + (desdeBriefing ? "▶ Empezar el turno" : "Seguir jugando") + '</button>');
+  document.getElementById("btnCerrarReglas").onclick = () => {
+    cerrarPanel();
+    if (desdeBriefing) toast("Recuerda: <strong>nadie decide por ti</strong>. Si algo se ve peligroso, prepárate antes de actuar.", 5200);
+  };
+}
+document.getElementById("reglasBtn").onclick = () => { if (!S.fin) panelReglas(false); };
 let toastTimer = null;
 function toast(msg, dur) {
   const t = document.getElementById("toast");
@@ -1362,15 +1553,47 @@ function leccion(id) {
   setTimeout(() => stage.classList.remove("shake"), 550);
   flashRojo(); sndAlerta(); setTimeout(sndBad, 250);
   hud();
+  if (S.bien <= 0) { derrota(l); return; }
   panel(
     (l.grave ? '<div style="text-align:center;font-size:44px">🚨</div>' : '') +
     '<h2 class="alerta">⚠️ ' + l.t + '</h2>' +
     '<div style="font-size:26px;font-weight:900;color:var(--red)">−' + (l.grave ? 25 : 10) +
-      ' pts · bienestar −' + (l.grave ? 40 : 20) + '%</div>' +
+      ' pts · salud −' + (l.grave ? 40 : 20) + '%</div>' +
+    '<div style="font-size:15px;font-weight:800;margin:4px 0 2px">Salud restante: ' +
+      "💚".repeat(S.bien > 66 ? 3 : S.bien > 33 ? 2 : 1) + "🖤".repeat(3 - (S.bien > 66 ? 3 : S.bien > 33 ? 2 : 1)) +
+      ' <span style="font-weight:600;color:var(--muted);font-size:13px">(si llega a 0, pierdes el turno)</span></div>' +
     '<div class="exp"><strong>PREVI:</strong> ' + l.exp + '</div>' +
     '<p class="regla">📌 “' + l.regla + '”</p>' +
     '<button class="btn" id="btnReint">Reintentar desde la zona</button>', "bad");
   document.getElementById("btnReint").onclick = reintentar;
+}
+/* Perdiste el turno: la salud llegó a 0 */
+function derrota(l) {
+  S.fin = true; S.pausado = true;
+  document.getElementById("joy").style.display = "none";
+  accionUI.style.display = "none";
+  const M = MUNDOS[S.mundo];
+  try {
+    const arr = JSON.parse(localStorage.getItem("ts_sesiones") || "[]");
+    arr.unshift({ nombre: S.nombre, fecha: new Date().toLocaleString("es-CO"), modo: M.nombre,
+                  puntos: S.puntos, pct: 0, nivel: "Turno perdido", errores: S.errores, errs: S.errs });
+    localStorage.setItem("ts_sesiones", JSON.stringify(arr.slice(0, 100)));
+  } catch (e) {}
+  panel(
+    '<div style="text-align:center;font-size:46px">🏥</div>' +
+    '<h2 class="alerta" style="text-align:center">Turno terminado por accidente</h2>' +
+    '<p style="text-align:center;font-size:14.5px;margin:2px 0 10px">' + escHtml(S.nombre) +
+      ', acumulaste <strong>' + S.errores + ' accidentes</strong> y tu salud llegó a <strong>0 🖤🖤🖤</strong>.</p>' +
+    '<div class="pierde"><h3>Lo que pasó</h3>' +
+    '<div style="font-size:13.5px"><strong>Último accidente:</strong> ' + l.t + '.<br>' + l.exp + '</div></div>' +
+    '<div class="exp"><strong>PREVI:</strong> En el juego reinicias y vuelves a empezar. ' +
+      '<strong>En el trabajo real no hay botón de reinicio.</strong> Por eso el EPP, el permiso y el reporte no son trámites: son lo que te devuelve a casa.</div>' +
+    '<p class="regla">📌 “' + l.regla + '”</p>' +
+    '<button class="btn" id="btnRe">🔄 Repetir el turno</button>' +
+    '<button class="btn sec" id="btnMenuD">Elegir mundo</button>', "bad");
+  document.getElementById("btnRe").onclick = () => { location.href = "aventura3d.html?mundo=" + S.mundo; };
+  document.getElementById("btnMenuD").onclick = () => location.href = "index.html";
+  sndBad(); setTimeout(sndBad, 300);
 }
 function reintentar() {
   S.x = S.checkpoint.x; S.z = S.checkpoint.z;
@@ -1761,6 +1984,14 @@ function update(dt) {
   if (S.flags.alarma && !S.fin && Math.floor(S.t * 1.2) !== Math.floor((S.t - dt) * 1.2)) sndAlerta();
   if (S.flags.alarma && S.x > 250.5 && !S.fin) terminar();
 
+  /* salud agotada por exposición continua (ruido o radiación sin protección) */
+  if (S.bien <= 0 && !S.fin) {
+    derrota({ t: "Daño por exposición sostenida",
+      exp: "Te quedaste en una zona de riesgo sin la protección que exigía. El daño por ruido o por radiación no llega de golpe: se acumula hasta que ya no hay vuelta atrás.",
+      regla: "La exposición sin protección se paga, siempre." });
+    return;
+  }
+
   const objN = objetivoActual();
   const et = MUNDOS[S.mundo].etapas;
   if (typeof objN.e === "number" && objN.e > S.etapa) {
@@ -1887,6 +2118,8 @@ function animarVisual(dt) {
     c.m.position.set(114.5 + Math.cos(c.a) * r, 1.4 + Math.sin(c.f * 3.1) * 0.9 - c.f * c.f * 1.5, -4.6 + Math.sin(c.a) * r * 0.6);
     c.m.visible = c.m.position.y > 0.05;
   });
+  /* grúa puente recorriendo la nave */
+  if (gruaPuente) gruaPuente.position.x = 60 + Math.sin(S.t * 0.16) * 44;
   /* ondas de ruido */
   ondas.forEach(({ o, f }) => {
     const k = ((S.t * 0.8 + f * 0.33) % 1);
@@ -1952,7 +2185,7 @@ function terminar() {
     '<h2 style="text-align:center">' + escHtml(S.nombre) + ', ' +
       (m1 ? "¡terminaste el turno en planta!" : "¡llegaste al punto de encuentro!") + '</h2>' +
     '<div class="res-pct">' + pct + '%</div>' +
-    '<span class="nivel">' + S.puntos + ' / ' + MAX + ' pts · ' + niv + ' · Bienestar ' + Math.round(S.bien) + '%</span>' +
+    '<span class="nivel">' + S.puntos + ' / ' + MAX + ' pts · ' + niv + ' · Salud ' + Math.round(S.bien) + '%</span>' +
     '<div class="medallas">' +
     medallas.map(m => '<div class="medalla ' + (m.ok ? "" : "off") + '"><span class="ico">' + m.ico + '</span>' + m.n + '</div>').join("") +
     '</div>' +
@@ -2067,16 +2300,22 @@ function briefing() {
     '<div style="background:#FFF4F5;border-left:4px solid var(--red);border-radius:10px;padding:11px 14px;margin-bottom:14px">' +
     '<div style="font-size:11.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);margin-bottom:4px">⚠️ Por qué importa</div>' +
     '<div style="font-size:13.5px">' + B.porque + '</div></div>' +
+    '<div class="gana" style="margin-bottom:6px"><h3>✅ Ganas si…</h3>' +
+    '<div style="font-size:13.5px">Llegas al final <strong>con salud</strong> 💚. Tu nivel sale del puntaje: <strong>90%+ = Líder SST</strong>.</div></div>' +
+    '<div class="pierde" style="margin-top:0"><h3>❌ Pierdes si…</h3>' +
+    '<div style="font-size:13.5px">Tu salud llega a <strong>0</strong>: son <strong>3 accidentes graves</strong> (o 5 leves) y el turno termina en la enfermería.</div></div>' +
     '<div class="ctl-demo">' +
     '<div class="k" style="border-color:var(--green)">🕹️<small><strong>Joystick</strong><br>o toca el piso<br>para caminar</small></div>' +
     '<div class="k" style="border-color:var(--yellow)">⚡<small><strong>Botón amarillo</strong><br>solo aparece si<br>hay algo que hacer</small></div>' +
     '</div>' +
     '<p style="font-size:12.5px;text-align:center;color:var(--muted);margin:6px 0 10px">Sigue las <strong>huellas amarillas</strong> hacia tu objetivo · 🔴 rojo en el piso = peligro · 🟢 verde = seguro</p>' +
-    '<button class="btn" id="btnVamos">▶ Empezar el turno</button>', "info");
+    '<button class="btn" id="btnVamos">▶ Empezar el turno</button>' +
+    '<button class="btn sec" id="btnVerReglas">📋 Ver todas las reglas y puntos</button>', "info");
   document.getElementById("btnVamos").onclick = () => {
     cerrarPanel();
     toast("Recuerda: <strong>nadie decide por ti</strong>. Si algo se ve peligroso, prepárate antes de actuar.", 5200);
   };
+  document.getElementById("btnVerReglas").onclick = () => panelReglas(true);
 }
 
 window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
