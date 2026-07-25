@@ -52,6 +52,23 @@
     #joy { display: block; }
   }
   #joy.forzado { display: block; }
+  /* ---------- Botón de acción manual (decisión del jugador) ---------- */
+  #accionUI {
+    position: absolute; bottom: 108px; left: 50%; transform: translateX(-50%);
+    z-index: 12; display: none; border: none; cursor: pointer; font-family: inherit;
+    background: linear-gradient(180deg, #FFD34D, var(--yellow));
+    color: #23272B; font-weight: 900; font-size: 17px; padding: 14px 26px;
+    border-radius: 999px; letter-spacing: 0.01em;
+    box-shadow: 0 5px 0 #8A6200, 0 12px 28px rgba(0,0,0,0.4);
+    animation: pop 0.3s cubic-bezier(0.2,1.5,0.4,1) both, latidoAcc 1.3s ease-in-out 0.3s infinite;
+  }
+  #accionUI:active { transform: translate(-50%, 4px); box-shadow: 0 0 0 #8A6200; animation: none; }
+  @keyframes pop { from { opacity: 0; transform: translate(-50%, 14px) scale(0.7); } to { opacity: 1; transform: translate(-50%,0) scale(1); } }
+  @keyframes latidoAcc { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } }
+  #accionUI.bloq {
+    background: linear-gradient(180deg, #E4677A, var(--red)); color: #fff;
+    box-shadow: 0 5px 0 #7E1424, 0 12px 28px rgba(0,0,0,0.4); animation: none;
+  }
   #stage canvas { display: block; width: 100% !important; height: 100% !important; }
   #stage.frozen canvas { filter: grayscale(1) contrast(1.15); }
   #stage.shake { animation: shake 0.5s both; }
@@ -216,6 +233,7 @@
     @keyframes latidoMovil { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
     #joy { width: 118px; height: 118px; bottom: 18px; left: 18px; }
     #joyKnob { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
+    #accionUI { bottom: 96px; font-size: 15px; padding: 12px 20px; }
     .panel { padding: 18px 16px; border-radius: 16px; max-height: 90%; }
     .panel h2 { font-size: 19px; }
     .panel .exp { font-size: 13px; padding: 9px 12px; }
@@ -259,6 +277,7 @@
   <div id="toast"></div>
   <div id="ruidoFx"></div>
   <button id="irBtn">👣 Ir al objetivo</button>
+  <button id="accionUI">⚡ Usar</button>
   <div id="joy"><div id="joyKnob"></div></div>
   <div id="overlay"></div>
 </div>
@@ -281,7 +300,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const S = {
   nombre: "", mundo: 1, etapa: 0,
   x: 3, z: 0, yaw: Math.PI / 2, andando: false, animT: 0,
-  epp: false, oidos: false, careta: false, inv: 0,
+  epp: false, oidos: false, careta: false, guantes: false, arnes: false, permiso: false,
+  subiendo: 0, subeT: 0, alturaY: 0, subidoOk: false, inv: 0,
   puntos: 0, bien: 100, errores: 0, errs: {}, reportes: 0,
   checkpoint: { x: 3, z: 0 }, pausado: true, fin: false, t: 0,
   flags: { apilado: false, contacto: false, electrico: false,
@@ -293,9 +313,10 @@ const S = {
 };
 /* Dos mundos independientes: 1 = Planta (operativo), 2 = Oficina */
 const MUNDOS = {
-  1: { nombre: "Mundo 1 · Planta", ico: "🏭", spawn: { x: 3, z: 0 }, meta: 118, max: 190,
+  1: { nombre: "Mundo 1 · Planta", ico: "🏭", spawn: { x: 3, z: 0 }, meta: 118, max: 270,
        etapas: ["Vestier · EPP", "Bodega · caída de objetos", "Montacargas · tránsito",
-                "Zona de ruido", "Riesgo eléctrico", "Soldadura", "Salida de planta"] },
+                "Trabajo en alturas", "Zona de ruido", "Riesgo eléctrico",
+                "Guantes · pieza caliente", "Soldadura · radiación", "Salida de planta"] },
   2: { nombre: "Mundo 2 · Oficina", ico: "🏢", spawn: { x: 124, z: 0 }, meta: 250.5, max: 155,
        etapas: ["Cables y orden", "Pasillo · carrito", "Derrame de café", "Pausa activa",
                 "Archivo y cargas", "Ergonomía", "Cierre y evacuación"] }
@@ -596,6 +617,63 @@ const cono = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.3, 14), mat(0xF57F17))
 cono.position.set(105.6, 0.65, 0); cono.castShadow = true; cono.visible = false; scene.add(cono);
 let tecnico = null, tecnicoLlega = 0;
 
+/* --- TRABAJO EN ALTURAS: plataforma, arnés, permiso y supervisor (x 56–68, z +3.5) --- */
+const ALT = { x: 64, z: 3.6, h: 3.4 };
+const platBase = new THREE.Group(); scene.add(platBase);
+(function () {
+  /* estructura */
+  [[-1.3, -0.9], [1.3, -0.9], [-1.3, 0.9], [1.3, 0.9]].forEach(([dx, dz]) => {
+    const p = caja(0.18, ALT.h, 0.18, 0x546E7A); p.position.set(ALT.x + dx, ALT.h / 2, ALT.z + dz); platBase.add(p);
+  });
+  const tabla = caja(3.0, 0.16, 2.1, 0xA1887F); tabla.position.set(ALT.x, ALT.h, ALT.z); platBase.add(tabla);
+  /* barandas de la plataforma */
+  [[0, -1.0], [0, 1.0]].forEach(([dx, dz]) => {
+    const b1 = caja(3.0, 0.08, 0.08, 0xF2B705, false); b1.position.set(ALT.x + dx, ALT.h + 1.0, ALT.z + dz); platBase.add(b1);
+    const b2 = caja(3.0, 0.08, 0.08, 0xF2B705, false); b2.position.set(ALT.x + dx, ALT.h + 0.55, ALT.z + dz); platBase.add(b2);
+  });
+  [[-1.45], [1.45]].forEach(([dx]) => {
+    const pv = caja(0.09, 1.1, 0.09, 0xF2B705, false); pv.position.set(ALT.x + dx, ALT.h + 0.55, ALT.z); platBase.add(pv);
+  });
+  /* escalera */
+  const l1 = caja(0.1, ALT.h + 0.5, 0.1, 0xB71C1C); l1.position.set(ALT.x - 1.7, (ALT.h + 0.5) / 2, ALT.z - 0.35); platBase.add(l1);
+  const l2 = caja(0.1, ALT.h + 0.5, 0.1, 0xB71C1C); l2.position.set(ALT.x - 1.7, (ALT.h + 0.5) / 2, ALT.z + 0.35); platBase.add(l2);
+  for (let y = 0.45; y < ALT.h + 0.3; y += 0.45) {
+    const pel = caja(0.08, 0.06, 0.8, 0xB71C1C, false); pel.position.set(ALT.x - 1.7, y, ALT.z); platBase.add(pel);
+  }
+  /* luminaria dañada que hay que cambiar */
+  const lum = caja(1.1, 0.12, 0.35, 0x546E7A, false); lum.position.set(ALT.x, ALT.h + 1.9, ALT.z); platBase.add(lum);
+})();
+const lumLuz = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.25),
+  new THREE.MeshBasicMaterial({ color: 0xFFF3C4 }));
+lumLuz.position.set(ALT.x, ALT.h + 1.84, ALT.z); scene.add(lumLuz);
+const altZona = plano(3.2, 2.4, 0xB62233, 0.3); altZona.position.set(ALT.x - 1.7, 0.03, ALT.z); scene.add(altZona);
+const senalAlt = letrero("⚠ TRABAJO EN ALTURAS · ARNÉS + PERMISO", 8, 1.4, "#F2B705", "#1F262A", 34);
+senalAlt.position.set(ALT.x, 5.6, ALT.z - 1.2); senalAlt.rotation.y = Math.PI; scene.add(senalAlt);
+/* soporte del arnés */
+const soporteArnes = caja(0.9, 1.6, 0.6, 0x455A64); soporteArnes.position.set(59, 0.8, 3.9); scene.add(soporteArnes);
+const arnesColgado = new THREE.Group();
+[[0.14], [-0.14]].forEach(([dx]) => {
+  const c = caja(0.08, 0.8, 0.06, 0xF2B705, false); c.position.set(59 + dx, 1.9, 3.9); arnesColgado.add(c);
+});
+const arnesArgolla = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 8, 12), mat(0x9E9E9E));
+arnesArgolla.position.set(59, 2.35, 3.9); arnesColgado.add(arnesArgolla);
+scene.add(arnesColgado);
+/* supervisor con el permiso de trabajo */
+const supervisor = humano({ camisa: 0xFFFFFF, pantalon: 0x263238, piel: 0xC68B59, pelo: 0x21150E });
+supervisor.g.position.set(56, 0, 4.2); supervisor.g.rotation.y = -Math.PI / 2.4; scene.add(supervisor.g);
+const cascoSup = new THREE.Group();
+const domoS = new THREE.Mesh(new THREE.SphereGeometry(0.31, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xFFFFFF));
+domoS.position.y = 0.05; cascoSup.add(domoS);
+const alaS = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.37, 0.05, 16), mat(0xFFFFFF)); cascoSup.add(alaS);
+cascoSup.position.y = 2.31; supervisor.g.add(cascoSup);
+const tablero = caja(0.5, 0.62, 0.05, 0xF5F0DC, false); tablero.position.set(0.42, 1.5, 0.28); tablero.rotation.z = -0.3; supervisor.g.add(tablero);
+const permisoSign = letrero("PERMISO DE TRABAJO", 3.4, 0.9, "#0A5CA8", "#fff", 44);
+permisoSign.position.set(56, 3.1, 4.1); permisoSign.rotation.y = -Math.PI / 2.4; scene.add(permisoSign);
+
+/* --- Guantes y pieza caliente (x 100 y mesa de soldadura) --- */
+const guantesBox = caja(1.0, 1.2, 0.7, 0xF57F17); guantesBox.position.set(100, 0.6, 3.9); scene.add(guantesBox);
+const guantesIcon = spriteEmoji("🧤", 1.1); guantesIcon.position.set(100, 1.9, 3.9); scene.add(guantesIcon);
+
 /* --- Soldadura: careta + arco con chispas (x 110–118) --- */
 const caretaBox = caja(1.0, 1.4, 0.7, 0xF57F17); caretaBox.position.set(110, 0.7, -4.6); scene.add(caretaBox);
 const caretaIcon = spriteEmoji("🥽", 1.1); caretaIcon.position.set(110, 2.0, -4.4); scene.add(caretaIcon);
@@ -603,7 +681,11 @@ const mesaSold = caja(3.2, 0.2, 1.4, 0x546E7A); mesaSold.position.set(114.5, 1.0
 [[-1.4], [1.4]].forEach(([dx]) => {
   const p = caja(0.16, 1.0, 1.0, 0x37474F); p.position.set(114.5 + dx, 0.5, -4.6); scene.add(p);
 });
-const piezaSold = caja(1.6, 0.25, 0.8, 0x78909C); piezaSold.position.set(114.5, 1.22, -4.6); scene.add(piezaSold);
+const piezaSold = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 0.8),
+  new THREE.MeshLambertMaterial({ color: 0xB03A1A, emissive: 0xC7361A, emissiveIntensity: 0.9 }));
+piezaSold.position.set(114.5, 1.22, -4.6); piezaSold.castShadow = true; scene.add(piezaSold);
+const calorSp = spriteEmoji("🔥", 1.2); calorSp.position.set(114.5, 2.1, -4.6); scene.add(calorSp);
+const calorZona = plano(3.4, 2.6, 0xB62233, 0.3); calorZona.position.set(114.5, 0.03, -3.9); scene.add(calorZona);
 const arco = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8),
   new THREE.MeshBasicMaterial({ color: 0xEAF6FF }));
 arco.position.set(114.5, 1.4, -4.6); scene.add(arco);
@@ -910,6 +992,24 @@ const orejasJ = new THREE.Group();
 const banda = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.032, 8, 14, Math.PI), mat(0xF57F17));
 banda.position.y = 2.19; orejasJ.add(banda);
 orejasJ.visible = false; jugador.g.add(orejasJ);
+/* guantes y arnés (equipables) */
+const guantesJ = new THREE.Group();
+[-0.42, 0.42].forEach(x => {
+  const gt = new THREE.Mesh(new THREE.SphereGeometry(0.115, 10, 8), mat(0xF57F17));
+  gt.position.set(x, 1.06, 0); guantesJ.add(gt);
+});
+guantesJ.visible = false; jugador.g.add(guantesJ);
+const arnesJ = new THREE.Group();
+[[0.16], [-0.16]].forEach(([dx]) => {
+  const correa = caja(0.09, 0.72, 0.06, 0xF2B705, false); correa.position.set(dx, 1.62, 0.2); arnesJ.add(correa);
+  const correaAt = caja(0.09, 0.72, 0.06, 0xF2B705, false); correaAt.position.set(dx, 1.62, -0.2); arnesJ.add(correaAt);
+});
+const cinturon = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.38, 0.14, 12, 1, true),
+  new THREE.MeshLambertMaterial({ color: 0xF2B705, side: THREE.DoubleSide }));
+cinturon.scale.z = 0.72; cinturon.position.y = 1.3; arnesJ.add(cinturon);
+const argolla = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.028, 8, 12), mat(0x9E9E9E));
+argolla.position.set(0, 1.68, -0.26); argolla.rotation.y = Math.PI / 2; arnesJ.add(argolla);
+arnesJ.visible = false; jugador.g.add(arnesJ);
 
 /* ---------- Personaje REALISTA: modelo rigged con animaciones de mocap.
    Si el GLB no carga (p. ej. sin conexión), queda el humano procedural. ---------- */
@@ -938,7 +1038,7 @@ new GLTFLoader().load("Soldier.glb", (gltf) => {
     real = { model, mixer, acc, head, spine, clips: gltf.animations, w: { Idle: 1, Walk: 0 } };
     jugador.g.visible = false;
     /* el EPP pasa a seguir los huesos del modelo real */
-    [cascoJ, chalecoJ, gafasJ, orejasJ, caretaJ].forEach(m => {
+    [cascoJ, chalecoJ, gafasJ, orejasJ, caretaJ, guantesJ, arnesJ].forEach(m => {
       jugador.g.remove(m); scene.add(m); m.scale.setScalar(0.6);
     });
   } catch (e) { /* respaldo procedural */ }
@@ -962,53 +1062,84 @@ previ.position.set(1, 3.2, 1.5); scene.add(previ);
 
 /* ---------- Marcadores de interacción y guía ---------- */
 const INTER = [
-  { id: "locker", x: 7, z: -3.6, activo: () => !S.epp, usar: abrirKit },
-  { id: "apilado", x: 40, z: -3.6, activo: () => S.epp && !S.flags.apilado, usar: () => {
+  { id: "locker", x: 7, z: -3.6, label: "🧰 Abrir casillero de EPP", activo: () => !S.epp, usar: abrirKit },
+  { id: "apilado", x: 40, z: -3.6, label: "📣 Reportar arrume inestable", activo: () => S.epp && !S.flags.apilado, usar: () => {
       S.flags.apilado = true; S.reportes++; S.puntos += 20; sndOk();
       scene.remove(apiladoBox); scene.remove(apiladoAlerta);
       toast("¡Reporte enviado! Esa pila inestable ya no sorprenderá a nadie. <strong>+20</strong>");
     } },
-  { id: "contacto", x: 45, z: -3.6, activo: () => S.epp && !S.flags.contacto, usar: () => {
+  { id: "contacto", x: 45, z: -3.6, label: "👀 Hacer contacto visual", activo: () => S.epp && !S.flags.contacto, usar: () => {
       S.flags.contacto = true; monta.pausa = 6; S.puntos += 20; sndOk();
       toast("El operador te vio y se detuvo (✅). ¡Cruza ahora! <strong>+20</strong>");
     } },
-  { id: "protector", x: 73, z: -3.6, activo: () => S.epp && !S.oidos, usar: () => {
+  /* --- trabajo en alturas: permiso, arnés y subida --- */
+  { id: "permiso", x: 56, z: 3.6, label: "📋 Pedir permiso de trabajo en alturas",
+    activo: () => S.epp && !S.permiso, usar: () => {
+      S.permiso = true; S.puntos += 15; sndOk();
+      toast("Permiso de trabajo autorizado por el supervisor. Ahora el <strong>arnés</strong>. <strong>+15</strong>");
+    } },
+  { id: "arnes", x: 59, z: 3.0, label: "🦺 Ponerse el arnés y línea de vida",
+    activo: () => S.epp && !S.arnes, usar: () => {
+      S.arnes = true; S.puntos += 10; sndPick(); arnesJ.visible = true;
+      scene.remove(arnesColgado);
+      toast("Arnés puesto y línea de vida lista. <strong>+10</strong>");
+    } },
+  { id: "subir", x: ALT.x - 1.7, z: ALT.z, label: "🪜 Subir a la plataforma",
+    peligro: true, activo: () => S.epp && !S.subidoOk, usar: () => {
+      if (S.permiso && S.arnes) { S.subiendo = 1; sndPick(); }
+      else { S.subiendo = -1; sndAlerta(); }
+    } },
+  { id: "protector", x: 73, z: -3.6, label: "🎧 Tomar protectores auditivos", activo: () => S.epp && !S.oidos, usar: () => {
       S.oidos = true; S.puntos += 10; sndPick(); orejasJ.visible = true;
       toast("Protectores puestos. Ahora sí, a la zona de ruido. <strong>+10</strong>");
     } },
-  { id: "electrico", x: 103, z: -3.6, activo: () => S.epp && !S.flags.electrico, usar: () => {
+  { id: "guantes", x: 100, z: 3.4, label: "🧤 Tomar guantes de carnaza",
+    activo: () => S.epp && !S.guantes, usar: () => {
+      S.guantes = true; S.puntos += 10; sndPick(); guantesJ.visible = true;
+      toast("Guantes puestos. Ahora puedes manipular piezas calientes. <strong>+10</strong>");
+    } },
+  { id: "electrico", x: 103, z: -3.6, label: "🚧 Señalizar y reportar el cable", activo: () => S.epp && !S.flags.electrico, usar: () => {
       S.flags.electrico = true; S.reportes++; S.puntos += 20; sndOk();
       cono.visible = true; tecnicoLlega = S.t + 1.4;
       toast("Zona señalizada y reporte enviado: viene el personal autorizado. <strong>+20</strong>");
     } },
-  { id: "careta", x: 110, z: -3.6, activo: () => S.epp && !S.careta, usar: () => {
+  { id: "careta", x: 110, z: -3.6, label: "🥽 Tomar la careta de soldadura", activo: () => S.epp && !S.careta, usar: () => {
       S.careta = true; S.puntos += 10; sndPick(); caretaJ.visible = true;
       toast("Careta de soldadura puesta. El arco eléctrico ya no daña tu vista. <strong>+10</strong>");
     } },
-  { id: "cables", x: 128, z: -3.6, activo: () => S.epp && !S.flags.cables, usar: () => {
+  { id: "pieza", x: 114.5, z: -3.4, label: "🔥 Retirar la pieza recién soldada",
+    peligro: true, activo: () => S.epp && !S.flags.pieza, usar: () => {
+      if (!S.guantes) { leccion("quemadura"); return; }
+      S.flags.pieza = true; S.puntos += 20; sndOk();
+      piezaSold.material.color.set(0x78909C);
+      piezaSold.material.emissive.set(0x000000);
+      calorSp.visible = false; calorZona.visible = false;
+      toast("Pieza retirada con guantes de carnaza, sin una sola quemadura. <strong>+20</strong>");
+    } },
+  { id: "cables", x: 128, z: -3.6, label: "🔌 Organizar cables en canaleta y reportar", activo: () => S.epp && !S.flags.cables, usar: () => {
       S.flags.cables = true; S.reportes++; S.puntos += 20; sndOk();
       cablesOf.visible = false; canaleta.visible = true;
       toast("Cables en canaleta y condición reportada. El pasillo quedó libre. <strong>+20</strong>");
     } },
-  { id: "derrame", x: 168, z: -3.6, activo: () => S.epp && !S.flags.derrame, usar: () => {
+  { id: "derrame", x: 168, z: -3.6, label: "🚧 Señalizar el derrame de café", activo: () => S.epp && !S.flags.derrame, usar: () => {
       S.flags.derrame = true; S.reportes++; S.puntos += 20; sndOk();
       conoDerrame.visible = true; derrame.material.opacity = 0.25;
       toast("Derrame señalizado y limpieza en camino. Nadie se resbala hoy. <strong>+20</strong>");
     } },
-  { id: "pausa", x: 185, z: -3.6, activo: () => S.epp && !S.flags.pausa, usar: () => {
+  { id: "pausa", x: 185, z: -3.6, label: "🤸 Hacer la pausa activa", activo: () => S.epp && !S.flags.pausa, usar: () => {
       S.flags.pausa = true; S.puntos += 15; S.bien = clamp(S.bien + 25, 0, 100); sndPick();
       toast("🤸 Pausa activa: cuello, espalda y hombros. Mira cómo sube tu bienestar. <strong>+15</strong>");
     } },
-  { id: "archivo", x: 200, z: -3.6, activo: () => S.epp && !S.flags.archivo, usar: () => {
+  { id: "archivo", x: 200, z: -3.6, label: "📦 Mover el archivo con el carro", activo: () => S.epp && !S.flags.archivo, usar: () => {
       S.flags.archivo = true; S.puntos += 15; sndOk();
       cajasArchivo.position.set(201.4, 0.95, -3.4);
       toast("Cajas al carro: la espalda carga rodando, no doblada. <strong>+15</strong>");
     } },
-  { id: "ergo", x: 215, z: -3.6, activo: () => S.epp && !S.flags.ergo, usar: () => {
+  { id: "ergo", x: 215, z: -3.6, label: "💺 Ajustar silla, pantalla y teclado", activo: () => S.epp && !S.flags.ergo, usar: () => {
       S.flags.ergo = true; S.puntos += 15; sndOk();
       toast("💺 Silla, pantalla y teclado ajustados: tu cuerpo trabaja contigo. <strong>+15</strong>");
     } },
-  { id: "cierre", x: 228, z: -3.6, activo: () => S.epp && !S.flags.cierre, usar: () => {
+  { id: "cierre", x: 228, z: -3.6, label: "🔌 Apagar equipos y ordenar el puesto", activo: () => S.epp && !S.flags.cierre, usar: () => {
       S.flags.cierre = true; S.puntos += 20; sndOk();
       toast("🔌 Equipos apagados, cajones cerrados, puesto ordenado. Así se termina un turno. <strong>+20</strong>");
     } }
@@ -1019,6 +1150,13 @@ INTER.forEach(it => {
   pad.position.set(it.x, 0.04, it.z); scene.add(pad);
   const sp = spriteEmoji("⚡", 1.2); sp.position.set(it.x, 1.7, it.z); scene.add(sp);
   it.pad = pad; it.sp = sp;
+});
+const accionUI = document.getElementById("accionUI");
+let interActivo = null;
+function accionar() { if (interActivo && !S.pausado && !S.fin) interActivo.usar(); }
+accionUI.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); accionar(); });
+addEventListener("keydown", e => {
+  if ((e.key === "e" || e.key === "E" || e.key === " ") && !e.repeat) accionar();
 });
 function interCercano() {
   let mejor = null, dist = 2.4;
@@ -1053,14 +1191,22 @@ function objetivoActual() {
     /* ---- MUNDO 1 · PLANTA ---- */
     if (!S.epp) return { e: 0, x: 7, z: -3.6, txt: "Toca el casillero y arma tu EPP" };
     if (S.x < 42) return { e: 1, x: 43, z: 0, txt: "Cruza la bodega — no pises los círculos rojos" };
-    if (!S.flags.contacto && S.x < 68) return { e: 2, x: 45, z: -3.6, txt: "Activa el contacto visual 👀 y cruza el montacargas" };
-    if (S.x < 70) return { e: 2, x: 71, z: 0, txt: "Cruza la zona del montacargas" };
-    if (!S.oidos && S.x < 98) return { e: 3, x: 73, z: -3.6, txt: "Toma los protectores auditivos 🎧" };
-    if (S.x < 99) return { e: 3, x: 100, z: 0, txt: "Cruza la sala de compresores" };
-    if (!S.flags.electrico && S.x < 107) return { e: 4, x: 103, z: -3.6, txt: "Señaliza y reporta el cable eléctrico" };
-    if (!S.careta && S.x < 112) return { e: 5, x: 110, z: -3.6, txt: "Toma la careta de soldadura 🥽" };
-    if (S.x < 118) return { e: 5, x: 119, z: 0, txt: "Cruza la zona de soldadura" };
-    return { e: 6, x: 119.5, z: 0, txt: "🏁 ¡Fin del turno en planta! Sal por la puerta" };
+    if (!S.flags.contacto && S.x < 52) return { e: 2, x: 45, z: -3.6, txt: "Activa el contacto visual 👀 y cruza el montacargas" };
+    /* --- trabajo en alturas: permiso → arnés → subir --- */
+    if (!S.subidoOk) {
+      if (!S.permiso) return { e: 3, x: 56, z: 3.6, txt: "Pide el permiso de trabajo al supervisor 📋" };
+      if (!S.arnes) return { e: 3, x: 59, z: 3.0, txt: "Ponte el arnés y la línea de vida 🦺" };
+      return { e: 3, x: ALT.x - 1.7, z: ALT.z, txt: "Sube a cambiar la luminaria 🪜" };
+    }
+    if (S.x < 70) return { e: 3, x: 71, z: 0, txt: "Cruza la zona del montacargas" };
+    if (!S.oidos && S.x < 98) return { e: 4, x: 73, z: -3.6, txt: "Toma los protectores auditivos 🎧" };
+    if (S.x < 99) return { e: 4, x: 100, z: 0, txt: "Cruza la sala de compresores" };
+    if (!S.guantes) return { e: 6, x: 100, z: 3.4, txt: "Toma los guantes de carnaza 🧤" };
+    if (!S.flags.electrico && S.x < 107) return { e: 5, x: 103, z: -3.6, txt: "Señaliza y reporta el cable eléctrico" };
+    if (!S.careta && S.x < 112) return { e: 7, x: 110, z: -3.6, txt: "Toma la careta de soldadura 🥽" };
+    if (!S.flags.pieza) return { e: 7, x: 114.5, z: -3.4, txt: "Retira la pieza recién soldada 🔥" };
+    if (S.x < 118) return { e: 7, x: 119, z: 0, txt: "Cruza la zona de soldadura" };
+    return { e: 8, x: 119.5, z: 0, txt: "🏁 ¡Fin del turno en planta! Sal por la puerta" };
   }
   /* ---- MUNDO 2 · OFICINA ---- */
   if (!S.flags.cables && S.x < 131) return { e: 0, x: 128, z: -3.6, txt: "Organiza y reporta los cables del pasillo" };
@@ -1120,13 +1266,19 @@ const LECCIONES = {
   electrico: { t: "Descarga eléctrica evitada en la simulación", exp: "Nunca te acerques a un cable energizado. Ve al punto de reporte 🚧 para que venga personal autorizado.", regla: "Cable suelto: señaliza, aléjate, reporta." },
   cables: { t: "Tropiezo con cables sueltos", exp: "Los cables atravesados son la caída más común en oficinas. Organízalos con canaleta y repórtalos en el punto ⚡ antes de pasar.", regla: "Piso libre, oficina segura." },
   carrito: { t: "Choque en el pasillo", exp: "En pasillos y esquinas se camina atento y se cede el paso. Dale espacio al carrito: espera a que pase o rodéalo.", regla: "Camina atento y cede el paso." },
-  derrame: { t: "Resbalón por piso húmedo", exp: "Un derrame sin señalizar es una caída esperando turno. Señalízalo y límpialo (o repórtalo) en el punto ⚡ antes de pasar.", regla: "Piso húmedo: señaliza antes de pasar." }
+  derrame: { t: "Resbalón por piso húmedo", exp: "Un derrame sin señalizar es una caída esperando turno. Señalízalo y límpialo (o repórtalo) en el punto ⚡ antes de pasar.", regla: "Piso húmedo: señaliza antes de pasar." },
+  altura: { t: "CAÍDA DE ALTURA · evitada en la simulación",
+    exp: "Subiste sin arnés o sin permiso de trabajo. Una caída desde 3 metros basta para dejar a una persona en silla de ruedas — o algo peor. La caída de altura es la primera causa de muerte laboral en Colombia.",
+    regla: "Sin arnés y sin permiso, NO se sube.", grave: true },
+  quemadura: { t: "Quemadura en la mano",
+    exp: "Tomaste una pieza recién soldada sin guantes: el metal queda a cientos de grados y no se ve caliente. Una quemadura de tercer grado en la mano puede costar meses de incapacidad y movilidad para siempre.",
+    regla: "El metal caliente no se ve: usa guantes.", grave: true }
 };
 function leccion(id) {
   const l = LECCIONES[id];
   S.errores++; S.errs[id] = (S.errs[id] || 0) + 1;
-  S.puntos = Math.max(0, S.puntos - 10);
-  S.bien = clamp(S.bien - 20, 0, 100);
+  S.puntos = Math.max(0, S.puntos - (l.grave ? 25 : 10));
+  S.bien = clamp(S.bien - (l.grave ? 40 : 20), 0, 100);
   if (id === "caida") S.limpio.bodega = false;
   if (id === "monta") S.limpio.monta = false;
   if (id === "carrito") S.limpio.carrito = false;
@@ -1135,8 +1287,10 @@ function leccion(id) {
   flashRojo(); sndAlerta(); setTimeout(sndBad, 250);
   hud();
   panel(
+    (l.grave ? '<div style="text-align:center;font-size:44px">🚨</div>' : '') +
     '<h2 class="alerta">⚠️ ' + l.t + '</h2>' +
-    '<div style="font-size:26px;font-weight:900;color:var(--red)">−10 pts · bienestar −20%</div>' +
+    '<div style="font-size:26px;font-weight:900;color:var(--red)">−' + (l.grave ? 25 : 10) +
+      ' pts · bienestar −' + (l.grave ? 40 : 20) + '%</div>' +
     '<div class="exp"><strong>PREVI:</strong> ' + l.exp + '</div>' +
     '<p class="regla">📌 “' + l.regla + '”</p>' +
     '<button class="btn" id="btnReint">Reintentar desde la zona</button>', "bad");
@@ -1144,7 +1298,10 @@ function leccion(id) {
 }
 function reintentar() {
   S.x = S.checkpoint.x; S.z = S.checkpoint.z;
+  S.subiendo = 0; S.subeT = 0; S.alturaY = 0; S.flags.tambaleo = false;
   jugador.g.position.set(S.x, 0, S.z);
+  jugador.g.rotation.z = 0;
+  if (real) real.model.rotation.z = 0;
   target = null;
   S.inv = 2.2;
   cerrarPanel();
@@ -1273,6 +1430,39 @@ function update(dt) {
   S.t += dt;
   if (S.inv > 0) S.inv -= dt;
 
+  /* --- subida a la plataforma: el momento de verdad de las alturas --- */
+  if (S.subiendo !== 0) {
+    S.subeT += dt;
+    S.x = ALT.x - 1.7; S.z = ALT.z;
+    if (S.subiendo === 1) {
+      /* con arnés y permiso: sube, cambia la luminaria y baja */
+      S.alturaY = Math.min(ALT.h, (S.subeT / 1.5) * ALT.h);
+      if (S.subeT > 1.5 && !S.flags.lumOk) {
+        S.flags.lumOk = true;
+        lumLuz.material.color.set(0xFFFFFF);
+        toast("💡 Luminaria cambiada con arnés y línea de vida anclada. Así se trabaja en alturas.", 4500);
+      }
+      if (S.subeT > 3.0) {
+        S.subiendo = 0; S.subeT = 0; S.alturaY = 0; S.subidoOk = true;
+        S.puntos += 25; sndOk(); hud();
+        toast("✅ Trabajo en alturas ejecutado con permiso, arnés y línea de vida. <strong>+25</strong>", 5000);
+      }
+    } else {
+      /* sin equipo: sube, se tambalea y la escena se congela antes del impacto */
+      S.alturaY = Math.min(ALT.h * 0.85, (S.subeT / 1.0) * ALT.h * 0.85);
+      if (S.subeT > 1.0 && !S.flags.tambaleo) {
+        S.flags.tambaleo = true;
+        toast("😰 Se te va el equilibrio y no tienes nada que te sostenga…", 1600);
+      }
+      if (S.subeT > 1.7) {
+        S.subiendo = 0; S.subeT = 0; S.alturaY = 0;
+        leccion("altura");
+      }
+    }
+    hud();
+    return; /* durante la subida no hay movimiento libre */
+  }
+
   /* movimiento */
   if (autoPilot) {
     const o = objetivoActual();
@@ -1328,12 +1518,20 @@ function update(dt) {
     avisoUnaVez("gate", "La barrera no abre sin tu EPP completo. Toca el casillero azul.", 4500);
   }
 
-  /* interacción automática */
+  /* interacción MANUAL: la decisión es del jugador */
   const it = interCercano();
-  if (it && S.t > (it.cdT || 0)) {
-    it.cdT = S.t + 3;
-    if (target && Math.hypot(target.x - it.x, target.z - it.z) < 3) { target = null; tapRing.visible = false; }
-    it.usar();
+  interActivo = it;
+  if (it) {
+    /* la guía te trae hasta aquí y te cede la decisión */
+    if (autoPilot && Math.hypot(S.x - it.x, S.z - it.z) < 2.1) {
+      autoPilot = false; setIrBtn(); target = null; tapRing.visible = false;
+      avisoUnaVez("dec_" + it.id, "✋ <strong>Aquí decides tú.</strong> Pulsa el botón amarillo si es lo correcto.", 4200);
+    }
+    accionUI.textContent = it.label || "⚡ Usar";
+    accionUI.classList.toggle("bloq", !!it.peligro);
+    accionUI.style.display = "block";
+  } else {
+    accionUI.style.display = "none";
   }
 
   /* checkpoints monotónicos */
@@ -1433,6 +1631,19 @@ function update(dt) {
     }
   }
 
+  /* --- alturas y pieza caliente: color del piso según tu equipo --- */
+  const listoAlt = S.permiso && S.arnes;
+  altZona.material.color.set(S.subidoOk ? 0x00795C : listoAlt ? 0x00795C : 0xB62233);
+  altZona.material.opacity = (S.subidoOk || listoAlt) ? 0.26 : 0.2 + Math.abs(Math.sin(S.t * 5)) * 0.15;
+  calorZona.material.color.set(S.guantes ? 0x00795C : 0xB62233);
+  calorZona.material.opacity = S.guantes ? 0.22 : 0.2 + Math.abs(Math.sin(S.t * 5)) * 0.15;
+  if (S.x > 50 && S.x < 57 && !S.subidoOk) {
+    avisoUnaVez("altAv", "🪜 <strong>Trabajo en alturas.</strong> Sin <strong>permiso</strong> del supervisor y <strong>arnés</strong>, no se sube. Nunca.");
+  }
+  if (S.x > 96 && S.x < 101 && !S.guantes) {
+    avisoUnaVez("guantesAv", "🧤 Más adelante hay una pieza recién soldada. El metal caliente <strong>no se ve</strong>: lleva guantes.");
+  }
+
   /* --- soldadura: radiación del arco --- */
   const enSold = S.x > 111 && S.x < 118.5 && S.z > -5 && S.z < 0;
   soldZona.material.color.set(S.careta ? 0x00795C : 0xB62233);
@@ -1516,10 +1727,13 @@ function animarVisual(dt) {
   yawVis += dy * Math.min(1, dt * 12);
   const parpadeo = S.inv > 0 && Math.sin(S.t * 18) > 0;
 
+  /* tambaleo antes de la caída (subida insegura) */
+  const tambaleo = S.subiendo === -1 && S.flags.tambaleo ? Math.sin(S.t * 22) * 0.30 : 0;
   if (real) {
     /* modelo realista con animaciones de mocap */
-    real.model.position.set(S.x, 0, S.z);
+    real.model.position.set(S.x, S.alturaY, S.z);
     real.model.rotation.y = yawVis + Math.PI; /* el modelo mira hacia −Z */
+    real.model.rotation.z = tambaleo;
     const objAnim = S.andando ? "Walk" : "Idle";
     ["Idle", "Walk"].forEach(n => {
       real.w[n] += ((n === objAnim ? 1 : 0) - real.w[n]) * Math.min(1, dt * 8);
@@ -1534,11 +1748,14 @@ function animarVisual(dt) {
     gafasJ.position.set(V1.x + fx * 0.135, V1.y + 0.045, V1.z + fz * 0.135); gafasJ.rotation.y = yawVis;
     orejasJ.position.set(V1.x, V1.y - 1.28, V1.z); orejasJ.rotation.y = yawVis;
     caretaJ.position.set(V1.x + fx * 0.06, V1.y - 1.32, V1.z + fz * 0.06); caretaJ.rotation.y = yawVis;
+    guantesJ.position.set(V1.x, V1.y - 1.36, V1.z); guantesJ.rotation.y = yawVis;
+    arnesJ.position.set(V1.x, V1.y - 1.32, V1.z); arnesJ.rotation.y = yawVis;
     real.spine.getWorldPosition(V1);
     chalecoJ.position.set(V1.x, V1.y - 0.12, V1.z); chalecoJ.rotation.y = yawVis;
   } else {
-    jugador.g.position.set(S.x, 0, S.z);
+    jugador.g.position.set(S.x, S.alturaY, S.z);
     jugador.g.rotation.y = yawVis;
+    jugador.g.rotation.z = tambaleo;
     /* marcha articulada procedural */
     const tA = S.animT, on = S.andando ? 1 : 0;
     jugador.musloL.rotation.x = -Math.sin(tA) * 0.62 * on;
@@ -1627,11 +1844,11 @@ function animarVisual(dt) {
   /* flechas evac */
   flechas.forEach((f, i) => { if (f.visible) f.position.y = 0.3 + Math.abs(Math.sin(S.t * 3 + i)) * 0.25; });
   /* cámara persigue */
-  const cx = S.x, cz = S.z + 11.2, cy = 8.4;
+  const cx = S.x, cz = S.z + 11.2, cy = 8.4 + S.alturaY * 0.75;
   camera.position.x += (cx - camera.position.x) * Math.min(1, dt * 4);
   camera.position.y += (cy - camera.position.y) * Math.min(1, dt * 4);
   camera.position.z += (cz - camera.position.z) * Math.min(1, dt * 4);
-  camera.lookAt(S.x, 1.6, S.z);
+  camera.lookAt(S.x, 1.6 + S.alturaY, S.z);
   /* luz sigue para sombras */
   sol.position.set(S.x + 14, 26, 12);
   sol.target.position.set(S.x, 0, 0);
@@ -1734,16 +1951,17 @@ function intro() {
   panel(
     '<div style="text-align:center;font-size:42px">👷</div>' +
     '<h2 style="text-align:center;margin-bottom:4px">Turno Seguro 3D</h2>' +
-    '<p style="font-size:14px;text-align:center;margin:0 0 12px;color:var(--muted)">Elige tu mundo. Cada uno son 7 niveles de riesgos reales.</p>' +
+    '<p style="font-size:14px;text-align:center;margin:0 0 12px;color:var(--muted)">Elige tu mundo. <strong>Las decisiones son tuyas:</strong> el equipo que no tomes, lo pagas.</p>' +
     '<input type="text" id="nombre" maxlength="40" placeholder="Tu nombre" autocomplete="off">' +
-    '<button class="btn" id="btnM1">🏭 Mundo 1 · Planta<br><small style="font-weight:600;font-size:12px;opacity:0.9">EPP · cajas · montacargas · ruido · eléctrico · soldadura</small></button>' +
+    '<button class="btn" id="btnM1">🏭 Mundo 1 · Planta<br><small style="font-weight:600;font-size:12px;opacity:0.9">EPP · cajas · montacargas · <strong>alturas</strong> · ruido · eléctrico · <strong>quemaduras</strong> · soldadura</small></button>' +
     '<button class="btn blue" id="btnM2" style="background:linear-gradient(180deg,#1272C6,#0A5CA8);box-shadow:0 4px 0 #063E70,0 8px 18px rgba(0,0,0,0.2)">🏢 Mundo 2 · Oficina' +
       (m1ok ? ' ✅' : '') + '<br><small style="font-weight:600;font-size:12px;opacity:0.9">cables · carrito · derrames · pausas · ergonomía</small></button>' +
     '<div class="ctl-demo" style="margin-top:12px">' +
-    '<div class="k" style="border-color:var(--green)">🕹️<small><strong>Joystick</strong><br>abajo a la izquierda</small></div>' +
-    '<div class="k">👣<small><strong>Botón verde</strong><br>te guía solo</small></div>' +
+    '<div class="k" style="border-color:var(--green)">🕹️<small><strong>Joystick</strong><br>para caminar</small></div>' +
+    '<div class="k">👣<small><strong>Guía</strong><br>te lleva, no decide</small></div>' +
+    '<div class="k" style="border-color:var(--yellow)">⚡<small><strong>Botón amarillo</strong><br>tú actúas</small></div>' +
     '</div>' +
-    '<p style="font-size:12.5px;text-align:center;color:var(--muted);margin:8px 0 0">Rojo en el piso = peligro · verde = seguro · ⚡ el personaje actúa solo</p>');
+    '<p style="font-size:12.5px;text-align:center;color:var(--muted);margin:8px 0 0">Rojo en el piso = peligro · verde = seguro · <strong>si el botón sale en rojo, piénsalo dos veces</strong></p>');
   document.getElementById("btnM1").onclick = () => empezar(1);
   document.getElementById("btnM2").onclick = () => empezar(2);
 }
@@ -1757,7 +1975,7 @@ function empezar(mundo, nombreDirecto) {
   iniciarAudioFondo();
   setIrBtn();
   const M = MUNDOS[S.mundo];
-  toast("¡" + M.ico + " " + M.nombre + "! Usa el <strong>joystick 🕹️</strong> o pulsa <strong>👣 Ir al objetivo</strong> y yo te guío.", 6000);
+  toast("¡" + M.ico + " " + M.nombre + "! Yo te guío hasta cada punto, pero <strong>la decisión es tuya</strong>: el botón amarillo ⚡ solo lo pulsas tú.", 6500);
 }
 
 window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
@@ -1767,6 +1985,7 @@ window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
               getReal: () => real,
               getAuto: () => autoPilot, setAuto: (v) => { autoPilot = v; setIrBtn(); },
               getJoy: () => joy, MUNDOS, aplicarMundo,
+              accionar, getInter: () => interActivo, INTER, ALT,
               empezar, togKit, confKit, abrirKit };
 
 /* si viene ?mundo=N desde "continuar"/"repetir", arrancar directo en ese mundo */
