@@ -636,7 +636,7 @@ cono.position.set(105.6, 0.65, 0); cono.castShadow = true; cono.visible = false;
 let tecnico = null, tecnicoLlega = 0, gruaPuente = null;
 
 /* --- TRABAJO EN ALTURAS: plataforma, arnés, permiso y supervisor (x 56–68, z +3.5) --- */
-const ALT = { x: 64, z: 3.6, h: 3.4 };
+const ALT = { x: 64, z: -3.8, h: 3.4 };
 const platBase = new THREE.Group(); scene.add(platBase);
 (function () {
   /* estructura */
@@ -666,19 +666,19 @@ const lumLuz = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.25),
 lumLuz.position.set(ALT.x, ALT.h + 1.84, ALT.z); scene.add(lumLuz);
 const altZona = plano(3.2, 2.4, 0xB62233, 0.3); altZona.position.set(ALT.x - 1.7, 0.03, ALT.z); scene.add(altZona);
 const senalAlt = letrero("⚠ TRABAJO EN ALTURAS · ARNÉS + PERMISO", 8, 1.4, "#F2B705", "#1F262A", 34);
-senalAlt.position.set(ALT.x, 5.6, ALT.z - 1.2); senalAlt.rotation.y = Math.PI; scene.add(senalAlt);
+senalAlt.position.set(ALT.x, 5.6, ALT.z - 2.4); scene.add(senalAlt);
 /* soporte del arnés */
-const soporteArnes = caja(0.9, 1.6, 0.6, 0x455A64); soporteArnes.position.set(59, 0.8, 3.9); scene.add(soporteArnes);
+const soporteArnes = caja(0.9, 1.6, 0.6, 0x455A64); soporteArnes.position.set(59, 0.8, -4.4); scene.add(soporteArnes);
 const arnesColgado = new THREE.Group();
 [[0.14], [-0.14]].forEach(([dx]) => {
-  const c = caja(0.08, 0.8, 0.06, 0xF2B705, false); c.position.set(59 + dx, 1.9, 3.9); arnesColgado.add(c);
+  const c = caja(0.08, 0.8, 0.06, 0xF2B705, false); c.position.set(59 + dx, 1.9, -4.4); arnesColgado.add(c);
 });
 const arnesArgolla = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 8, 12), mat(0x9E9E9E));
-arnesArgolla.position.set(59, 2.35, 3.9); arnesColgado.add(arnesArgolla);
+arnesArgolla.position.set(59, 2.35, -4.4); arnesColgado.add(arnesArgolla);
 scene.add(arnesColgado);
 /* supervisor con el permiso de trabajo */
 const supervisor = humano({ camisa: 0xFFFFFF, pantalon: 0x263238, piel: 0xC68B59, pelo: 0x21150E });
-supervisor.g.position.set(56, 0, 4.2); supervisor.g.rotation.y = -Math.PI / 2.4; scene.add(supervisor.g);
+supervisor.g.position.set(56, 0, -4.4); supervisor.g.rotation.y = Math.PI / 2.4; scene.add(supervisor.g);
 const cascoSup = new THREE.Group();
 const domoS = new THREE.Mesh(new THREE.SphereGeometry(0.31, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xFFFFFF));
 domoS.position.y = 0.05; cascoSup.add(domoS);
@@ -686,11 +686,11 @@ const alaS = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.37, 0.05, 16), ma
 cascoSup.position.y = 2.31; supervisor.g.add(cascoSup);
 const tablero = caja(0.5, 0.62, 0.05, 0xF5F0DC, false); tablero.position.set(0.42, 1.5, 0.28); tablero.rotation.z = -0.3; supervisor.g.add(tablero);
 const permisoSign = letrero("PERMISO DE TRABAJO", 3.4, 0.9, "#0A5CA8", "#fff", 44);
-permisoSign.position.set(56, 3.1, 4.1); permisoSign.rotation.y = -Math.PI / 2.4; scene.add(permisoSign);
+permisoSign.position.set(56, 3.1, -5.0); scene.add(permisoSign);
 
 /* --- Guantes y pieza caliente (x 100 y mesa de soldadura) --- */
-const guantesBox = caja(1.0, 1.2, 0.7, 0xF57F17); guantesBox.position.set(100, 0.6, 3.9); scene.add(guantesBox);
-const guantesIcon = spriteEmoji("🧤", 1.1); guantesIcon.position.set(100, 1.9, 3.9); scene.add(guantesIcon);
+const guantesBox = caja(1.0, 1.2, 0.7, 0xF57F17); guantesBox.position.set(100, 0.6, -4.4); scene.add(guantesBox);
+const guantesIcon = spriteEmoji("🧤", 1.1); guantesIcon.position.set(100, 1.9, -4.4); scene.add(guantesIcon);
 
 /* --- Soldadura: careta + arco con chispas (x 110–118) --- */
 const caretaBox = caja(1.0, 1.4, 0.7, 0xF57F17); caretaBox.position.set(110, 0.7, -4.6); scene.add(caretaBox);
@@ -809,15 +809,15 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
 (function decorar() {
   /* --- techo: vigas transversales y lámparas colgantes --- */
   for (let x = 4; x < 120; x += 10) {
-    const viga = caja(0.5, 0.5, 13.5, 0x8A96A0, false); viga.position.set(x, 6.9, 0); scene.add(viga);
+    const viga = caja(0.5, 0.5, 8.6, 0x8A96A0, false); viga.position.set(x, 6.9, -2.4); scene.add(viga);
   }
-  const vigaLarga = caja(120, 0.35, 0.35, 0x78909C, false); vigaLarga.position.set(60, 6.6, -3); scene.add(vigaLarga);
-  const vigaLarga2 = vigaLarga.clone(); vigaLarga2.position.z = 3; scene.add(vigaLarga2);
+  const vigaLarga = caja(120, 0.35, 0.35, 0x78909C, false); vigaLarga.position.set(60, 6.6, -5.4); scene.add(vigaLarga);
+  const vigaLarga2 = vigaLarga.clone(); vigaLarga2.position.z = -1.2; scene.add(vigaLarga2);
   for (let x = 8; x < 120; x += 12) {
-    const cuelga = caja(0.06, 0.9, 0.06, 0x546E7A, false); cuelga.position.set(x, 6.2, 0); scene.add(cuelga);
-    const carcasa = caja(2.2, 0.14, 0.55, 0x455A64, false); carcasa.position.set(x, 5.75, 0); scene.add(carcasa);
+    const cuelga = caja(0.06, 0.9, 0.06, 0x546E7A, false); cuelga.position.set(x, 6.2, -2.6); scene.add(cuelga);
+    const carcasa = caja(2.2, 0.14, 0.55, 0x455A64, false); carcasa.position.set(x, 5.75, -2.6); scene.add(carcasa);
     const luz = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.06, 0.42), new THREE.MeshBasicMaterial({ color: 0xFFF6D8 }));
-    luz.position.set(x, 5.67, 0); scene.add(luz);
+    luz.position.set(x, 5.67, -2.6); scene.add(luz);
   }
   /* --- columnas estructurales con franja de seguridad --- */
   for (let x = 14; x < 120; x += 24) {
@@ -912,16 +912,16 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
   });
   /* ===================== PLANTA: más vida industrial ===================== */
   /* grúa puente recorriendo la nave */
-  const rielA = caja(112, 0.3, 0.3, 0x8A96A0, false); rielA.position.set(60, 6.3, -4.6); scene.add(rielA);
-  const rielB = rielA.clone(); rielB.position.z = 4.6; scene.add(rielB);
+  const rielA = caja(112, 0.3, 0.3, 0x8A96A0, false); rielA.position.set(60, 6.3, -5.6); scene.add(rielA);
+  const rielB = rielA.clone(); rielB.position.z = -1.4; scene.add(rielB);
   gruaPuente = new THREE.Group(); scene.add(gruaPuente);
   (function () {
-    const viga = caja(1.1, 0.7, 10, 0xF2B705, false); viga.position.y = 5.9; gruaPuente.add(viga);
-    const carro = caja(1.6, 0.7, 1.6, 0x455A64, false); carro.position.set(0, 5.4, 0); gruaPuente.add(carro);
+    const viga = caja(1.1, 0.7, 5.2, 0xF2B705, false); viga.position.set(0, 5.9, -3.5); gruaPuente.add(viga);
+    const carro = caja(1.6, 0.7, 1.6, 0x455A64, false); carro.position.set(0, 5.4, -3.5); gruaPuente.add(carro);
     const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.6, 6), mat(0x37474F));
-    cable.position.set(0, 3.9, 0); gruaPuente.add(cable);
-    const gancho = caja(0.5, 0.45, 0.5, 0xB0BEC5, false); gancho.position.set(0, 2.5, 0); gruaPuente.add(gancho);
-    const carga = caja(1.5, 1.1, 1.5, 0xBC8F5E); carga.position.set(0, 1.75, 0); gruaPuente.add(carga);
+    cable.position.set(0, 3.9, -3.5); gruaPuente.add(cable);
+    const gancho = caja(0.5, 0.45, 0.5, 0xB0BEC5, false); gancho.position.set(0, 2.5, -3.5); gruaPuente.add(gancho);
+    const carga = caja(1.5, 1.1, 1.5, 0xBC8F5E); carga.position.set(0, 1.75, -3.5); gruaPuente.add(carga);
   })();
   /* señalización vertical ISO en postes */
   const SENALES = [
@@ -930,10 +930,10 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
     [98, "⚡ RIESGO ELÉCTRICO", "#B62233"], [112, "🥽 RADIACIÓN · USE CARETA", "#F2B705"]
   ];
   SENALES.forEach(([x, t, c]) => {
-    const poste = caja(0.12, 2.6, 0.12, 0xB0BEC5, false); poste.position.set(x, 1.3, 5.3); scene.add(poste);
+    const poste = caja(0.12, 2.6, 0.12, 0xB0BEC5, false); poste.position.set(x, 1.3, 5.7); scene.add(poste);
     const s = letrero(t, 3.6, 1.0, c, c === "#F2B705" ? "#1F262A" : "#fff", 30);
-    s.position.set(x, 2.75, 5.28); s.rotation.y = Math.PI; scene.add(s);
-    const s2 = s.clone(); s2.rotation.y = 0; s2.position.z = 5.32; scene.add(s2);
+    s.position.set(x, 2.75, 5.68); s.rotation.y = Math.PI; scene.add(s);
+    const s2 = s.clone(); s2.rotation.y = 0; s2.position.z = 5.72; scene.add(s2);
   });
   /* marcas viales del pasillo de montacargas */
   for (let x = 46; x < 70; x += 6) {
@@ -963,18 +963,22 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
   conoCharco.position.set(86.6, 0.5, 4.2); conoCharco.castShadow = true; scene.add(conoCharco);
 
   /* ===================== OFICINA: ambiente propio ===================== */
-  /* cielo raso bajo con paneles y luminarias empotradas (nada de vigas) */
-  const rasoY = 4.5;
-  const raso = new THREE.Mesh(new THREE.BoxGeometry(136, 0.18, 13.6), mat(0xF2F4F6));
-  raso.position.set(190, rasoY, 0); scene.add(raso);
+  /* Cielo raso: SOLO sobre la mitad del fondo. El lado de la cámara queda
+     abierto (corte tipo casa de muñecas) para que el techo nunca tape el juego. */
+  const rasoY = 4.5, rasoZ = -3.9, rasoD = 5.6;   /* cubre z −6.7 … −1.1 */
+  const raso = new THREE.Mesh(new THREE.BoxGeometry(136, 0.18, rasoD), mat(0xF2F4F6));
+  raso.position.set(190, rasoY, rasoZ); scene.add(raso);
+  /* moldura de remate en el borde abierto */
+  const moldura = caja(136, 0.34, 0.22, 0xDDE3E8, false);
+  moldura.position.set(190, rasoY - 0.08, rasoZ + rasoD / 2); scene.add(moldura);
   for (let x = 124; x < 256; x += 3.4) {
-    const junta = caja(0.05, 0.04, 13.6, 0xD7DDE2, false); junta.position.set(x, rasoY - 0.11, 0); scene.add(junta);
+    const junta = caja(0.05, 0.04, rasoD, 0xD7DDE2, false); junta.position.set(x, rasoY - 0.11, rasoZ); scene.add(junta);
   }
-  [-3.4, 0, 3.4].forEach(z => {
+  [-5.6, -3.9, -2.2].forEach(z => {
     const junta = caja(136, 0.04, 0.05, 0xD7DDE2, false); junta.position.set(190, rasoY - 0.11, z); scene.add(junta);
   });
   for (let x = 127; x < 254; x += 9) {
-    [-3.4, 3.4].forEach(z => {
+    [-5.4, -2.4].forEach(z => {
       const marcoL = caja(2.6, 0.06, 0.9, 0xE8ECEF, false); marcoL.position.set(x, rasoY - 0.13, z); scene.add(marcoL);
       const panelLuz = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.05, 0.75),
         new THREE.MeshBasicMaterial({ color: 0xFFFDF2 }));
@@ -982,11 +986,20 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
     });
     /* rejilla de aire acondicionado intercalada */
     if ((x - 127) % 27 === 0) {
-      const rejilla = caja(1.2, 0.08, 1.2, 0xCFD6DB, false); rejilla.position.set(x + 4.5, rasoY - 0.14, 0); scene.add(rejilla);
+      const rejilla = caja(1.2, 0.08, 1.2, 0xCFD6DB, false); rejilla.position.set(x + 4.5, rasoY - 0.14, -3.9); scene.add(rejilla);
       for (let k = -0.45; k <= 0.45; k += 0.22) {
-        const aleta = caja(1.1, 0.03, 0.06, 0xAEB8BF, false); aleta.position.set(x + 4.5, rasoY - 0.2, k); scene.add(aleta);
+        const aleta = caja(1.1, 0.03, 0.06, 0xAEB8BF, false); aleta.position.set(x + 4.5, rasoY - 0.2, -3.9 + k); scene.add(aleta);
       }
     }
+  }
+  /* luminarias lineales ancladas al borde del cielo raso: iluminan el pasillo
+     sin cruzar nunca la línea de visión de la cámara */
+  for (let x = 130; x < 254; x += 11) {
+    const tubo = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.1, 0.18),
+      new THREE.MeshBasicMaterial({ color: 0xFFFDF2 }));
+    tubo.position.set(x, 4.22, rasoZ + rasoD / 2); scene.add(tubo);
+    const soporte = caja(2.6, 0.12, 0.1, 0xC9D2D8, false);
+    soporte.position.set(x, 4.33, rasoZ + rasoD / 2 - 0.06); scene.add(soporte);
   }
   /* pared de oficina: color claro, zócalo y guardasilla */
   const paredOf = caja(136, 4.6, 0.25, 0xE9EEF2, false); paredOf.position.set(190, 2.3, -6.45); scene.add(paredOf);
@@ -1064,15 +1077,17 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
       const re = caja(0.62, 0.8, 0.1, 0x37474F, false);
       re.position.set(166 + Math.cos(ang) * 3.25, 1.15, -4.2 + Math.sin(ang) * 2.25); juntasG.add(re);
     }
-    /* pared de vidrio de la sala */
-    const vidrioJ = new THREE.Mesh(new THREE.BoxGeometry(9, 2.6, 0.08),
-      new THREE.MeshLambertMaterial({ color: 0xD7ECF6, transparent: true, opacity: 0.4 }));
-    vidrioJ.position.set(166, 1.3, -1.9); juntasG.add(vidrioJ);
-    const marcoJ = caja(9.2, 0.12, 0.14, 0xB0BEC5, false); marcoJ.position.set(166, 2.62, -1.9); juntasG.add(marcoJ);
+    /* mamparas laterales de vidrio: dejan la sala abierta hacia la cámara */
+    [-4.4, 4.4].forEach(dx => {
+      const vidrioJ = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 4.4),
+        new THREE.MeshLambertMaterial({ color: 0xD7ECF6, transparent: true, opacity: 0.4 }));
+      vidrioJ.position.set(166 + dx, 1.2, -4.2); juntasG.add(vidrioJ);
+      const marcoJ = caja(0.14, 0.1, 4.4, 0xB0BEC5, false); marcoJ.position.set(166 + dx, 2.42, -4.2); juntasG.add(marcoJ);
+    });
     const tvJ = caja(2.6, 1.5, 0.1, 0x1A1A1A, false); tvJ.position.set(166, 2.4, -6.2); juntasG.add(tvJ);
   })();
   const salaSign = letrero("SALA DE JUNTAS", 3.2, 0.8, "#455A64", "#fff", 40);
-  salaSign.position.set(166, 3.2, -1.85); scene.add(salaSign);
+  salaSign.position.set(166, 3.55, -6.24); scene.add(salaSign);
   /* monitores encendidos en los puestos */
   [178, 190, 212].forEach((x, i) => {
     const pantallaOn = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.52),
@@ -1264,12 +1279,12 @@ const INTER = [
       toast("El operador te vio y se detuvo (✅). ¡Cruza ahora! <strong>+20</strong>");
     } },
   /* --- trabajo en alturas: permiso, arnés y subida --- */
-  { id: "permiso", x: 56, z: 3.6, label: "📋 Pedir permiso de trabajo en alturas",
+  { id: "permiso", x: 56, z: -3.5, label: "📋 Pedir permiso de trabajo en alturas",
     activo: () => S.epp && !S.permiso, usar: () => {
       S.permiso = true; S.puntos += 15; sndOk();
       toast("Permiso de trabajo autorizado por el supervisor. Ahora el <strong>arnés</strong>. <strong>+15</strong>");
     } },
-  { id: "arnes", x: 59, z: 3.0, label: "🦺 Ponerse el arnés y línea de vida",
+  { id: "arnes", x: 59, z: -3.3, label: "🦺 Ponerse el arnés y línea de vida",
     activo: () => S.epp && !S.arnes, usar: () => {
       S.arnes = true; S.puntos += 10; sndPick(); arnesJ.visible = true;
       scene.remove(arnesColgado);
@@ -1286,7 +1301,7 @@ const INTER = [
       S.oidos = true; S.puntos += 10; sndPick(); orejasJ.visible = true;
       toast("Protectores puestos. Ahora sí, a la zona de ruido. <strong>+10</strong>");
     } },
-  { id: "guantes", x: 100, z: 3.4, label: "🧤 Tomar guantes de carnaza",
+  { id: "guantes", x: 100, z: -3.5, label: "🧤 Tomar guantes de carnaza",
     activo: () => S.epp && !S.guantes, usar: () => {
       S.guantes = true; S.puntos += 10; sndPick(); guantesJ.visible = true;
       toast("Guantes puestos. Ahora puedes manipular piezas calientes. <strong>+10</strong>");
@@ -1413,14 +1428,14 @@ function objetivoActual() {
     if (!S.flags.contacto && S.x < 52) return { e: 2, x: 45, z: -3.6, txt: "Activa el contacto visual 👀 y cruza el montacargas" };
     /* --- trabajo en alturas: permiso → arnés → subir --- */
     if (!S.subidoOk) {
-      if (!S.permiso) return { e: 3, x: 56, z: 3.6, txt: "Pide el permiso de trabajo al supervisor 📋" };
-      if (!S.arnes) return { e: 3, x: 59, z: 3.0, txt: "Ponte el arnés y la línea de vida 🦺" };
+      if (!S.permiso) return { e: 3, x: 56, z: -3.5, txt: "Pide el permiso de trabajo al supervisor 📋" };
+      if (!S.arnes) return { e: 3, x: 59, z: -3.3, txt: "Ponte el arnés y la línea de vida 🦺" };
       return { e: 3, x: ALT.x - 1.7, z: ALT.z, txt: "Sube a cambiar la luminaria 🪜" };
     }
     if (S.x < 70) return { e: 3, x: 71, z: 0, txt: "Cruza la zona del montacargas" };
     if (!S.oidos && S.x < 98) return { e: 4, x: 73, z: -3.6, txt: "Toma los protectores auditivos 🎧" };
     if (S.x < 99) return { e: 4, x: 100, z: 0, txt: "Cruza la sala de compresores" };
-    if (!S.guantes) return { e: 6, x: 100, z: 3.4, txt: "Toma los guantes de carnaza 🧤" };
+    if (!S.guantes) return { e: 6, x: 100, z: -3.5, txt: "Toma los guantes de carnaza 🧤" };
     if (!S.flags.electrico && S.x < 107) return { e: 5, x: 103, z: -3.6, txt: "Señaliza y reporta el cable eléctrico" };
     if (!S.careta && S.x < 112) return { e: 7, x: 110, z: -3.6, txt: "Toma la careta de soldadura 🥽" };
     if (!S.flags.pieza) return { e: 7, x: 114.5, z: -3.4, txt: "Retira la pieza recién soldada 🔥" };
@@ -1714,7 +1729,7 @@ renderer.domElement.addEventListener("pointerdown", e => {
   const ny = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera({ x: nx, y: ny }, camera);
   if (ray.ray.intersectPlane(planoPiso, vTmp)) {
-    target = { x: clamp(vTmp.x, 2, 255), z: clamp(vTmp.z, -5, 5) };
+    target = { x: clamp(vTmp.x, 2, 255), z: clamp(vTmp.z, -3.9, 4.2) };
     S.flags.avisos.primerTap = true;
     tapRing.position.set(target.x, 0.05, target.z);
     tapRing.visible = true;
@@ -1781,7 +1796,7 @@ function update(dt) {
     vx /= mag; vz /= mag;
     if (!esperando) {
       S.x = clamp(S.x + vx * 4.6 * dt, 2, 255);
-      S.z = clamp(S.z + vz * 4.6 * dt, -5, 5);
+      S.z = clamp(S.z + vz * 4.6 * dt, -3.9, 4.2);
       S.yaw = Math.atan2(vx, vz);
       S.animT += dt * 10;
       S.pasoT = (S.pasoT || 0) + dt;
@@ -2324,7 +2339,7 @@ window.AV = { S, update, monta, CAJAS, leccion, terminar, objetivoActual,
               getTarget: () => target, setTarget: (x, z) => { target = { x, z }; },
               getReal: () => real,
               getJoy: () => joy, MUNDOS, aplicarMundo,
-              accionar, getInter: () => interActivo, INTER, ALT,
+              accionar, getInter: () => interActivo, INTER, ALT, scene, camera, THREE,
               empezar, togKit, confKit, abrirKit };
 
 /* si viene ?mundo=N desde "continuar"/"repetir", arrancar directo en ese mundo */
