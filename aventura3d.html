@@ -1105,14 +1105,16 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
   /* sala de juntas con vidrio */
   const juntasG = new THREE.Group(); scene.add(juntasG);
   (function () {
+    /* centro de la sala más cerca de la cámara: ningún asiento llega al muro del fondo (z=-6.3) */
+    const centroZ = -3.4, radioSillas = 1.9;
     const mesaJ = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 0.12, 20), mat(0xA1887F));
-    mesaJ.position.set(166, 1.05, -4.2); juntasG.add(mesaJ);
+    mesaJ.position.set(166, 1.05, centroZ); juntasG.add(mesaJ);
     const pieJ = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.6, 1.0, 12), mat(0x546E7A));
-    pieJ.position.set(166, 0.5, -4.2); juntasG.add(pieJ);
+    pieJ.position.set(166, 0.5, centroZ); juntasG.add(pieJ);
     /* sillas completas alrededor de la mesa, mirando al centro */
     for (let a = 0; a < 6; a++) {
       const ang = a * 1.047;
-      const sx = 166 + Math.cos(ang) * 3.0, sz = -4.2 + Math.sin(ang) * 2.2;
+      const sx = 166 + Math.cos(ang) * 3.0, sz = centroZ + Math.sin(ang) * radioSillas;
       const s = sillaOficina(sx, sz, 1);
       s.rotation.y = -ang + Math.PI / 2;   /* el espaldar queda hacia afuera */
     }
@@ -1120,8 +1122,8 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
     [-4.4, 4.4].forEach(dx => {
       const vidrioJ = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 4.4),
         new THREE.MeshLambertMaterial({ color: 0xD7ECF6, transparent: true, opacity: 0.4 }));
-      vidrioJ.position.set(166 + dx, 1.2, -4.2); juntasG.add(vidrioJ);
-      const marcoJ = caja(0.14, 0.1, 4.4, 0xB0BEC5, false); marcoJ.position.set(166 + dx, 2.42, -4.2); juntasG.add(marcoJ);
+      vidrioJ.position.set(166 + dx, 1.2, centroZ); juntasG.add(vidrioJ);
+      const marcoJ = caja(0.14, 0.1, 4.4, 0xB0BEC5, false); marcoJ.position.set(166 + dx, 2.42, centroZ); juntasG.add(marcoJ);
     });
     const tvJ = caja(2.6, 1.5, 0.1, 0x1A1A1A, false); tvJ.position.set(166, 2.4, -6.2); juntasG.add(tvJ);
   })();
@@ -1146,7 +1148,9 @@ const encPoste = caja(0.16, 2.2, 0.16, 0x455A64); encPoste.position.set(252.5, 1
     c.espinillaL.rotation.x = Math.PI / 2; c.espinillaR.rotation.x = Math.PI / 2;
     c.hombroL.rotation.x = -0.75; c.hombroR.rotation.x = -0.75;
     c.codoL.rotation.x = -0.55; c.codoR.rotation.x = -0.55;
-    c.g.position.set(x, 0.52, -3.7);
+    /* la cadera del rig (muslo) ya vive en y=1.14 dentro del grupo: para que
+       quede a la altura del asiento (≈0.5) hay que RESTAR ese offset, no sumarlo */
+    c.g.position.set(x, 0.5 - 1.14, -3.7);
     c.g.rotation.y = Math.PI;          /* mirando al escritorio del fondo */
     scene.add(c.g);
   });
@@ -2140,8 +2144,10 @@ function animarVisual(dt) {
     jugador.g.visible = !parpadeo;
   }
   if (tecnico && tecnico.mixer) tecnico.mixer.update(dt);
-  /* barrera */
-  const objRot = S.epp ? -1.25 : 0;
+  /* barrera: el brazo pivota en el poste (z=5); el signo debe ser positivo
+     para que se LEVANTE al abrir — con signo negativo el extremo se hundía
+     bajo el piso en vez de subir */
+  const objRot = S.epp ? 1.25 : 0;
   barreraGrupo.rotation.x += (objRot - barreraGrupo.rotation.x) * Math.min(1, dt * 4);
   /* PREVI sigue al jugador */
   const px = S.x - Math.sin(S.yaw) * 1.6, pz = S.z - Math.cos(S.yaw) * 1.6 + 1.2;
